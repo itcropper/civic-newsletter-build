@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Birmingham Civic Weekly — Stay Informed on City Hall</title>
+  <meta name="description" content="A free weekly digest of Birmingham city council decisions, budget votes, zoning changes, and public safety updates — fact-checked and clearly explained." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            civic: {
+              red: '#B22234',
+              darkred: '#8B1A27',
+              gold: '#C9A84C',
+              light: '#FDF8F4',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-white text-gray-900 antialiased">
+
+  <!-- Header -->
+  <header class="bg-civic-red text-white py-4 px-6">
+    <div class="max-w-3xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-civic-gold rounded-sm flex items-center justify-center">
+          <span class="text-civic-darkred font-bold text-sm">B</span>
+        </div>
+        <span class="font-semibold tracking-wide text-sm uppercase">Birmingham Civic Weekly</span>
+      </div>
+      <span class="text-red-200 text-xs hidden sm:block">Birmingham, Alabama</span>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="bg-civic-light border-b border-gray-200 py-16 px-6">
+    <div class="max-w-3xl mx-auto text-center">
+      <p class="text-civic-red font-semibold text-sm uppercase tracking-widest mb-4">Civic Newsletter &mdash; $4/month</p>
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
+        Know What City Hall<br class="hidden sm:block" /> Is Doing — Every Week
+      </h1>
+      <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+        Birmingham Civic Weekly delivers a clear, concise digest of city council decisions, budget votes, zoning changes, and public safety updates — every Tuesday morning.
+      </p>
+
+      <!-- Subscribe Form -->
+      <form
+        action="#"
+        method="POST"
+        class="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
+        onsubmit="return false;"
+      >
+        <input
+          type="email"
+          name="email"
+          placeholder="Your email address"
+          required
+          class="flex-1 px-5 py-3 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-civic-red focus:border-transparent text-base"
+        />
+        <button
+          type="submit"
+          class="bg-civic-red hover:bg-civic-darkred text-white font-semibold px-7 py-3 rounded-md transition-colors duration-200 text-base whitespace-nowrap"
+        >
+          Subscribe &mdash; $4/month
+        </button>
+      </form>
+      <p class="mt-4 text-gray-400 text-sm">$4/month. Cancel anytime. No long-term commitment.</p>
+    </div>
+  </section>
+
+  <!-- What You'll Get -->
+  <section class="py-14 px-6 bg-white">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl font-bold text-gray-900 mb-8">What you'll get every week</h2>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div class="border border-gray-100 rounded-lg p-6 bg-gray-50">
+          <div class="w-10 h-10 bg-civic-red rounded-md flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">City Council Recap</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">Every vote, every resolution, summarized clearly — without the jargon. Know what your elected officials decided this week.</p>
+        </div>
+        <div class="border border-gray-100 rounded-lg p-6 bg-gray-50">
+          <div class="w-10 h-10 bg-civic-red rounded-md flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Budget and Spending</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">Track how Birmingham spends your tax dollars — contracts awarded, budget amendments, and fiscal decisions that affect city services.</p>
+        </div>
+        <div class="border border-gray-100 rounded-lg p-6 bg-gray-50">
+          <div class="w-10 h-10 bg-civic-red rounded-md flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Zoning and Development</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">New construction permits, zoning variances, and development approvals in your neighborhood — before they break ground.</p>
+        </div>
+        <div class="border border-gray-100 rounded-lg p-6 bg-gray-50">
+          <div class="w-10 h-10 bg-civic-red rounded-md flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Public Safety Updates</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">Police department policy changes, fire department news, and public safety initiatives coming from City Hall — not just crime statistics.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Subscribe -->
+  <section class="py-14 px-6 bg-civic-light border-t border-gray-200">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">Why Birmingham needs this</h2>
+      <div class="prose prose-gray max-w-none">
+        <p class="text-gray-700 text-lg leading-relaxed mb-4">
+          Local news coverage of Birmingham's city government has declined significantly over the past decade. City council meetings happen regularly — covering budgets, zoning, police contracts, and more — but most residents never hear about them.
+        </p>
+        <p class="text-gray-700 text-lg leading-relaxed mb-4">
+          Birmingham Civic Weekly changes that. Using AI-assisted research, we track public meeting agendas posted at <strong>birminghamal.gov</strong>, parse council minutes, and translate the bureaucratic language of city government into plain English you can actually use.
+        </p>
+        <p class="text-gray-700 text-lg leading-relaxed">
+          Staying informed about your local government is one of the most impactful things you can do as a citizen. We make it easy.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Second CTA -->
+  <section class="py-14 px-6 bg-civic-red text-white">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="text-3xl font-bold mb-4">Ready to stay informed?</h2>
+      <p class="text-red-100 mb-8 text-lg">Join your neighbors who are following Birmingham city government every week.</p>
+      <form
+        action="#"
+        method="POST"
+        class="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
+        onsubmit="return false;"
+      >
+        <input
+          type="email"
+          name="email"
+          placeholder="Your email address"
+          required
+          class="flex-1 px-5 py-3 border border-red-300 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-civic-gold text-base"
+        />
+        <button
+          type="submit"
+          class="bg-civic-gold hover:bg-yellow-500 text-civic-darkred font-semibold px-7 py-3 rounded-md transition-colors duration-200 text-base whitespace-nowrap"
+        >
+          Subscribe &mdash; $4/month
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-400 py-8 px-6">
+    <div class="max-w-3xl mx-auto">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <p class="text-white font-semibold text-sm mb-1">Birmingham Civic Weekly</p>
+          <p class="text-xs">Powered by Civic Newsletter AI</p>
+        </div>
+        <div class="text-xs text-gray-500 sm:text-right max-w-sm">
+          This newsletter is an automated civic information service. Content is AI-assisted and sourced from official public records. It is not affiliated with the City of Birmingham or any government agency.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

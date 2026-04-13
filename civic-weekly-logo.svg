@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <!-- Background -->
+  <rect width="400" height="400" rx="40" fill="#1a1a2e"/>
+
+  <!-- City skyline silhouette -->
+  <g fill="#2d2d4e">
+    <rect x="40" y="240" width="30" height="80"/>
+    <rect x="75" y="210" width="25" height="110"/>
+    <rect x="105" y="225" width="35" height="95"/>
+    <rect x="145" y="195" width="20" height="125"/>
+    <rect x="170" y="215" width="40" height="105"/>
+    <rect x="215" y="200" width="25" height="120"/>
+    <rect x="245" y="220" width="30" height="100"/>
+    <rect x="280" y="205" width="20" height="115"/>
+    <rect x="305" y="230" width="35" height="90"/>
+    <rect x="345" y="215" width="25" height="105"/>
+  </g>
+
+  <!-- Accent line -->
+  <rect x="40" y="320" width="320" height="3" rx="2" fill="#4a9eff" opacity="0.6"/>
+
+  <!-- "CW" monogram -->
+  <text
+    x="200"
+    y="200"
+    font-family="Georgia, serif"
+    font-size="110"
+    font-weight="bold"
+    fill="white"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    letter-spacing="-4"
+  >CW</text>
+
+  <!-- Subtitle -->
+  <text
+    x="200"
+    y="355"
+    font-family="Arial, sans-serif"
+    font-size="22"
+    fill="#9999bb"
+    text-anchor="middle"
+    letter-spacing="6"
+  >CIVIC WEEKLY</text>
+</svg>
