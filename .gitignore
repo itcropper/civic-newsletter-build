@@ -13,3 +13,12 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Next.js build artifacts (web app)
+web/.next/
+web/out/
+web/.vercel/
+web/tsconfig.tsbuildinfo
+
+# Auto-generated branding assets pulled from Wikipedia
+web/public/branding-auto/

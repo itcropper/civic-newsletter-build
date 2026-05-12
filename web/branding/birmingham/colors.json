@@ -1,0 +1,5 @@
+{
+  "primary": "#1B365D",
+  "secondary": "#C9A55C",
+  "_note": "Override for Birmingham. Navy + gold = civic/governmental feel. Replace colors here, or drop a hero.jpg in this folder, and the site will pick them up on next build."
+}

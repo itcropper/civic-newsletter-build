@@ -1,0 +1,86 @@
+{
+  "city": "Birmingham",
+  "story_id": "fc0f1868-ffec-4193-9882-e837a085b8af",
+  "platforms": {
+    "facebook": {
+      "platform": "facebook",
+      "destination_url": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=facebook&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12",
+      "creative_variants": [
+        {
+          "angle": "civic_fact",
+          "headline": "Birmingham weighs $790K covenant deal",
+          "body": "Council to consider releasing covenant on Graymont School property.",
+          "cta": "Read story",
+          "link": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=facebook&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12"
+        },
+        {
+          "angle": "resident_impact",
+          "headline": "City may owe $790K by 2032",
+          "body": "Conditions on a former school site could trigger a county payout.",
+          "cta": "Learn more",
+          "link": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=facebook&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12"
+        },
+        {
+          "angle": "curiosity",
+          "headline": "Why $790K? What's the catch?",
+          "body": "A covenant on the former Graymont School comes with a price tag.",
+          "cta": "See details",
+          "link": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=facebook&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12"
+        }
+      ],
+      "audience": {
+        "geo": { "city": "Birmingham", "state": "Alabama", "radius_miles": 5 },
+        "age": { "min": 28, "max": 65 },
+        "interests": ["local news", "city government", "Birmingham Alabama", "civic engagement", "real estate", "homeowner"],
+        "behaviors": ["small business owner", "registered voter"],
+        "exclude": ["users who clicked this campaign in last 30 days"],
+        "rationale": "Property-deal stories perform best with engaged homeowners aged 28-65 inside the municipal boundary plus a small buffer. Adding small-business-owner and voter behaviors raises civic-engagement signal."
+      },
+      "budget": { "daily_usd": 20, "total_usd": 100, "duration_days": 5 },
+      "campaign_id": "birmingham_the-committee-will-consider-an_2026-05-12",
+      "story_id": "fc0f1868-ffec-4193-9882-e837a085b8af",
+      "city": "Birmingham",
+      "generated_at": "2026-05-12T17:00:00.000Z"
+    },
+    "nextdoor": {
+      "platform": "nextdoor",
+      "destination_url": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=nextdoor&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12",
+      "creative_variants": [
+        {
+          "angle": "civic_fact",
+          "headline": "Birmingham weighs $790K covenant deal",
+          "body": "Council to consider releasing covenant on Graymont School property.",
+          "cta": "Read story",
+          "link": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=nextdoor&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12"
+        },
+        {
+          "angle": "resident_impact",
+          "headline": "City may owe $790K by 2032",
+          "body": "Conditions on a former school site could trigger a county payout.",
+          "cta": "Learn more",
+          "link": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=nextdoor&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12"
+        },
+        {
+          "angle": "curiosity",
+          "headline": "Why $790K? What's the catch?",
+          "body": "A covenant on the former Graymont School comes with a price tag.",
+          "cta": "See details",
+          "link": "https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=nextdoor&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12"
+        }
+      ],
+      "audience": {
+        "geo": { "city": "Birmingham", "state": "Alabama", "radius_miles": 5 },
+        "age": { "min": 28, "max": 65 },
+        "interests": ["local news", "city government", "Birmingham Alabama", "civic engagement", "real estate", "homeowner"],
+        "behaviors": ["small business owner", "registered voter"],
+        "exclude": ["users who clicked this campaign in last 30 days"],
+        "rationale": "Property-deal stories perform best with engaged homeowners aged 28-65 inside the municipal boundary plus a small buffer. Nextdoor's neighborhood-level geofencing means radius can be small."
+      },
+      "budget": { "daily_usd": 15, "total_usd": 75, "duration_days": 5 },
+      "campaign_id": "birmingham_the-committee-will-consider-an_2026-05-12",
+      "story_id": "fc0f1868-ffec-4193-9882-e837a085b8af",
+      "city": "Birmingham",
+      "generated_at": "2026-05-12T17:00:00.000Z"
+    }
+  }
+}
