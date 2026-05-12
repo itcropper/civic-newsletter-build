@@ -1,20 +1,31 @@
 /**
- * Agent 1 — AI-Guided Civic Content Navigator
+ * Agent 1 — Civic Content Crawler
  * Model: Claude Sonnet
  *
- * Instead of brute-force breadth-first crawling, this agent reasons about
- * each page it visits and decides which links to follow to find meeting
- * recordings, transcripts, and minutes. It can follow links across domains
- * (e.g., from a city site to CivicClerk, Granicus, YouTube, telvue, etc.)
+ * Reads meeting pages from a city's pre-configured archive URL list
+ * (stored in cities.archive_urls). This list is provided by the operator
+ * during city onboarding — it contains the specific archive/agenda pages
+ * for each meeting body (city council, planning commission, school board, etc.)
  *
- * The agent operates in a loop:
- * 1. Fetch a page
- * 2. Ask Claude to analyze the page content and available links
- * 3. Claude decides: is this meeting content? Which links should we follow?
- * 4. Repeat until we've found meeting content or exhausted our budget
+ * When archive_urls is set, the crawler visits exactly those pages and
+ * follows only one level of links outward (to individual meeting PDFs,
+ * agenda pages, or video links found on those pages). No autonomous
+ * wide-area discovery is performed.
  *
- * This approach is generic — it works for any city regardless of what
- * platform they use (CivicEngage, CivicClerk, Granicus, Legistar, etc.)
+ * If archive_urls is NOT set (legacy / fallback mode), the crawler falls
+ * back to autonomous AI-guided navigation starting from seed_url. This
+ * mode is unpredictable and should be replaced with a proper archive_urls
+ * list as part of city onboarding.
+ *
+ * Onboarding a new city:
+ *   1. Visit the city's website and find the meeting minutes/agendas page
+ *      for each governing body you want to cover.
+ *   2. Add those URLs to cities.archive_urls in the database:
+ *      e.g. ["https://cityname.gov/AgendaCenter",
+ *            "https://cityname.legistar.com/Calendar.aspx",
+ *            "https://cityname.novusagenda.com/agendapublic/"]
+ *   3. The crawler will visit exactly these pages each nightly run and
+ *      extract meeting links found on them.
  */
 
 import crypto from 'crypto';
@@ -119,14 +130,18 @@ RULES:
 }
 
 /**
- * Run the AI-guided navigator for a single city.
+ * Run the crawler for a single city.
+ *
+ * If city.archive_urls is set, uses those as the starting queue (preferred mode).
+ * Otherwise falls back to autonomous AI-guided navigation from seed_url (legacy mode).
+ *
  * @param {string} cityId - UUID of the city to crawl
- * @returns {object} - { newMeetings: number, pagesVisited: number, errors: string[] }
+ * @returns {object} - { newMeetings: number, pagesVisited: number, errors: string[], mode: string }
  */
 export async function runCrawler(cityId) {
   const { data: city, error: cityErr } = await supabase
     .from('cities')
-    .select('id, name, seed_url, send_schedule, last_issue_date')
+    .select('id, name, seed_url, archive_urls, send_schedule, last_issue_date')
     .eq('id', cityId)
     .single();
 
@@ -138,8 +153,98 @@ export async function runCrawler(cityId) {
 
   console.log(`[Crawler] ${city.name}: date range ${dateRange?.start} to ${dateRange?.end}`);
 
-  const results = { newMeetings: 0, pagesVisited: 0, errors: [] };
+  const results = { newMeetings: 0, pagesVisited: 0, errors: [], mode: 'unknown' };
   const visited = new Set();
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MODE A: archive_urls provided (preferred — operator-configured)
+  // Visits exactly the supplied archive pages + one level of outbound links.
+  // ─────────────────────────────────────────────────────────────────────────
+  const archiveUrls = city.archive_urls;
+  if (archiveUrls && Array.isArray(archiveUrls) && archiveUrls.length > 0) {
+    results.mode = 'archive_urls';
+    console.log(`[Crawler] ${city.name}: using archive_urls mode (${archiveUrls.length} configured URLs)`);
+
+    const queue = archiveUrls.map(url => ({
+      url: ensureProtocol(url),
+      reason: 'operator-configured archive URL',
+      priority: 1,
+    }));
+
+    while (queue.length > 0 && results.pagesVisited < MAX_STEPS && results.newMeetings < MAX_MEETINGS) {
+      queue.sort((a, b) => a.priority - b.priority);
+      const next = queue.shift();
+      const normalizedUrl = normalizeUrl(next.url);
+      if (visited.has(normalizedUrl)) continue;
+      visited.add(normalizedUrl);
+
+      try {
+        await sleep(MIN_DELAY_MS);
+        console.log(`[Crawler] Step ${results.pagesVisited + 1}: ${normalizedUrl}`);
+        const page = await fetchPage(normalizedUrl);
+        if (!page) { console.log(`[Crawler]   -> failed to fetch`); continue; }
+
+        results.pagesVisited++;
+
+        // Auto-detect civic portal + video platform links before Claude analysis
+        const civicPortalLinks = extractCivicPortalLinks(page.links);
+        for (const portalLink of civicPortalLinks) {
+          const portalUrl = normalizeUrl(portalLink.url);
+          if (!visited.has(portalUrl)) {
+            queue.push({
+              url: portalUrl,
+              reason: `auto-detected ${portalLink.platform}`,
+              priority: portalLink.priority,
+            });
+          }
+        }
+
+        // Ask Claude to analyze the page and find meeting links
+        const analysis = await callClaudeJSON(
+          MODELS.SONNET,
+          systemPrompt,
+          `CURRENT URL: ${normalizedUrl}\n\nPAGE TEXT (first 8000 chars):\n${page.text.substring(0, 8000)}\n\nLINKS ON PAGE (first 150):\n${page.links.slice(0, 150).map(l => `- ${l}`).join('\n')}`,
+          { maxTokens: 2048 }
+        );
+
+        console.log(`[Crawler]   -> ${analysis.page_type}: ${analysis.reasoning?.substring(0, 100)}`);
+
+        // Collect any meetings found directly on this archive page
+        if (analysis.meetings_found && analysis.meetings_found.length > 0) {
+          for (const meeting of analysis.meetings_found) {
+            if (meeting.confidence < 0.6) continue;
+            if (dateRange && meeting.date && (meeting.date < dateRange.start || meeting.date > dateRange.end)) continue;
+            await upsertMeeting(cityId, meeting, normalizedUrl, results);
+          }
+        }
+
+        // In archive_urls mode, follow only the most promising links found
+        // on the archive page itself (one level deep — no recursive expansion)
+        if (analysis.links_to_follow && analysis.links_to_follow.length > 0) {
+          for (const link of analysis.links_to_follow.slice(0, 5)) {
+            const linkUrl = normalizeUrl(link.url);
+            if (!visited.has(linkUrl) && link.priority <= 2) {
+              queue.push({ url: linkUrl, reason: link.reason, priority: link.priority + 1 });
+            }
+          }
+        }
+
+      } catch (err) {
+        results.errors.push(`Error at ${normalizedUrl}: ${err.message}`);
+      }
+    }
+
+    console.log(`[Crawler] ${city.name} (archive mode): visited ${results.pagesVisited} pages, found ${results.newMeetings} new meetings`);
+    return results;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MODE B: legacy autonomous navigation (fallback — no archive_urls set)
+  // Starts from seed_url and autonomously discovers meeting pages.
+  // NOTE: This mode is unpredictable. Add archive_urls during city onboarding.
+  // ─────────────────────────────────────────────────────────────────────────
+  results.mode = 'legacy_autonomous';
+  console.warn(`[Crawler] ${city.name}: LEGACY MODE — no archive_urls configured. Add archive_urls during city onboarding for reliable crawling.`);
 
   // Start with the seed URL — Claude will figure out where to go from there
   const queue = [{ url: ensureProtocol(city.seed_url), reason: 'seed URL', priority: 1 }];
@@ -206,46 +311,11 @@ export async function runCrawler(cityId) {
       if (analysis.meetings_found && analysis.meetings_found.length > 0) {
         for (const meeting of analysis.meetings_found) {
           if (meeting.confidence < 0.6) continue;
-
-          // Date range filtering (server-side guard)
-          if (dateRange && meeting.date) {
-            if (meeting.date < dateRange.start || meeting.date > dateRange.end) {
-              console.log(`[Crawler]   -> SKIPPED (out of date range): ${meeting.title} (${meeting.date})`);
-              continue;
-            }
+          if (dateRange && meeting.date && (meeting.date < dateRange.start || meeting.date > dateRange.end)) {
+            console.log(`[Crawler]   -> SKIPPED (out of date range): ${meeting.title} (${meeting.date})`);
+            continue;
           }
-
-          const meetingUrl = meeting.url || normalizedUrl;
-          const contentHash = crypto
-            .createHash('sha256')
-            .update(meetingUrl)
-            .digest('hex');
-
-          // Check if already exists
-          const { data: existing } = await supabase
-            .from('meetings')
-            .select('id')
-            .eq('content_hash', contentHash)
-            .limit(1);
-
-          if (!existing || existing.length === 0) {
-            const { error: insertErr } = await supabase.from('meetings').insert({
-              city_id: cityId,
-              url: meetingUrl,
-              content_hash: contentHash,
-              source_url: meetingUrl,
-              meeting_date: meeting.date || null,
-              meeting_type: mapMeetingType(meeting.meeting_type),
-              status: 'queued',
-            });
-
-            if (insertErr) {
-              results.errors.push(`Insert failed for ${meetingUrl}: ${insertErr.message}`);
-            } else {
-              results.newMeetings++;
-              console.log(`[Crawler]   -> NEW MEETING: ${meeting.title} (${meeting.content_type}, ${meeting.date})`);
-            }
-          }
+          await upsertMeeting(cityId, meeting, normalizedUrl, results);
         }
       }
 
@@ -272,6 +342,40 @@ export async function runCrawler(cityId) {
 
   console.log(`[Crawler] ${city.name}: visited ${results.pagesVisited} pages, found ${results.newMeetings} new meetings`);
   return results;
+}
+
+/**
+ * Insert a meeting into the DB if it doesn't already exist (dedup by URL hash).
+ * Shared between archive_urls mode and legacy mode.
+ */
+async function upsertMeeting(cityId, meeting, pageUrl, results) {
+  const meetingUrl = meeting.url || pageUrl;
+  const contentHash = crypto.createHash('sha256').update(meetingUrl).digest('hex');
+
+  const { data: existing } = await supabase
+    .from('meetings')
+    .select('id')
+    .eq('content_hash', contentHash)
+    .limit(1);
+
+  if (!existing || existing.length === 0) {
+    const { error: insertErr } = await supabase.from('meetings').insert({
+      city_id: cityId,
+      url: meetingUrl,
+      content_hash: contentHash,
+      source_url: meetingUrl,
+      meeting_date: meeting.date || null,
+      meeting_type: mapMeetingType(meeting.meeting_type),
+      status: 'queued',
+    });
+
+    if (insertErr) {
+      results.errors.push(`Insert failed for ${meetingUrl}: ${insertErr.message}`);
+    } else {
+      results.newMeetings++;
+      console.log(`[Crawler]   -> NEW MEETING: ${meeting.title} (${meeting.content_type}, ${meeting.date})`);
+    }
+  }
 }
 
 /**

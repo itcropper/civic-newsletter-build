@@ -10,29 +10,46 @@ import supabase from '../config/db.js';
 import { callClaudeJSON, MODELS } from '../config/anthropic.js';
 import { getStyleConfig, buildStylePromptBlock } from '../utils/style-config.js';
 
-const SUMMARIZER_SYSTEM = `You are a civic journalist AI. You produce clear, factual summaries of government meeting proceedings for a local newsletter audience.
+const SUMMARIZER_SYSTEM = `You are a civic journalist AI writing for a local newsletter. Your goal is to produce stories that read like professional local journalism — not bureaucratic summaries. Readers want to know WHO made decisions, WHAT was decided, and WHAT it means for them.
 
 For each meeting transcript provided, identify 2–5 key topics or decisions. For each topic:
-1. Write a 40–80 word summary in plain neutral prose
-2. Assign exactly one category: Budget / Safety / Schools / Roads / Zoning / Parks / Utilities / Other
-3. Assign an impact level:
+
+1. Write a 80–150 word story in plain readable prose. This story MUST:
+   - Name specific people (council members, commissioners, directors, department heads) whenever they are mentioned or took a vote — do not anonymize them as "officials" or "the committee"
+   - Include exact dollar amounts, vote tallies (e.g., "passed 6-1"), and relevant dates
+   - State clearly what was decided and what happens next (implementation timeline, next vote, public comment period, etc.)
+   - Reference the source document type (e.g., "according to the meeting agenda", "per the budget proposal submitted by...")
+   - Be written for a general resident audience — avoid jargon without explanation
+
+2. Write a 1–2 sentence "context_note" that adds meaningful background NOT in the transcript itself. This can include:
+   - How this item fits into a broader city initiative or ongoing issue
+   - Historical precedent (e.g., "this is the third time in two years the council has revisited this property")
+   - What residents should watch for at upcoming meetings
+   - NOTE: Do NOT editorialize, express opinion, or use loaded language. Context notes must be factual observations, not judgments. If you cannot write a genuinely useful context note from the transcript alone, write "" (empty string) and the enrichment agent will attempt to research it separately.
+
+3. Assign exactly one category: Budget / Safety / Schools / Roads / Zoning / Parks / Utilities / Other
+
+4. Assign an impact level:
    - High: dollar amounts >$100K, direct vote on policy, affects schools or safety
    - Medium: procedural votes, budget discussions, planning approvals
    - Low: routine scheduling, minor administrative items
-4. Extract all votes into an array: [{"motion": "...", "result": "passed/failed", "vote_count": "5-2"}]
+
+5. Extract all votes into an array: [{"motion": "...", "result": "passed/failed", "vote_count": "5-2", "names_for": ["..."], "names_against": ["..."]}]
+   - Include individual vote breakdowns by name if available in the transcript
 
 Return JSON array:
 [
   {
-    "headline": "short headline",
-    "summary": "40-80 word summary",
+    "headline": "short descriptive headline (max 12 words)",
+    "summary": "80-150 word story with names, amounts, and specifics",
+    "context_note": "1-2 sentence factual background note, or empty string",
     "category": "Budget|Safety|Schools|Roads|Zoning|Parks|Utilities|Other",
     "impact": "High|Medium|Low",
-    "votes": [{"motion": "...", "result": "...", "vote_count": "..."}]
+    "votes": [{"motion": "...", "result": "...", "vote_count": "...", "names_for": [], "names_against": []}]
   }
 ]
 
-CRITICAL: Every claim in your summary must come directly from the transcript. Do not infer, speculate, or embellish.`;
+CRITICAL: Every factual claim in your summary must come directly from the transcript. Do not fabricate names, dollar amounts, or vote counts. You MAY note when key information (like a vote breakdown or meeting outcome) was not present in the available transcript excerpt.`;
 
 /**
  * Run summarizer for all processed meetings in a city.
@@ -86,6 +103,7 @@ ${meeting.transcript_text.substring(0, 30000)}`;
         meeting_id: meeting.id,
         city_id: cityId,
         summary_text: s.summary,
+        context_note: s.context_note || null,
         category: s.category,
         impact_score: s.impact,
         votes_json: s.votes || [],

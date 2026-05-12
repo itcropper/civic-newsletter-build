@@ -31,6 +31,51 @@
   <style>
     body { font-family: 'Inter', sans-serif; }
   </style>
+  <script>
+    // ─────────────────────────────────────────────────────────────────────
+    // BEEHIIV CONFIGURATION
+    // Replace the placeholder URL below with your Beehiiv embed URL.
+    // Find it in: Beehiiv Dashboard → Grow → Forms → [Your Form] → Embed URL
+    // Format: https://embeds.beehiiv.com/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+    // ─────────────────────────────────────────────────────────────────────
+    const BEEHIIV_EMBED_URL = 'REPLACE_WITH_BEEHIIV_EMBED_URL';
+
+    function handleSubscribe(formEl, buttonEl) {
+      const emailInput = formEl.querySelector('input[type="email"]');
+      const email = emailInput.value.trim();
+      if (!email) return false;
+
+      if (BEEHIIV_EMBED_URL.startsWith('REPLACE_')) {
+        alert('Beehiiv embed URL not configured yet. See the BEEHIIV CONFIGURATION comment in the page source.');
+        return false;
+      }
+
+      buttonEl.disabled = true;
+      buttonEl.textContent = 'Subscribing...';
+
+      fetch(BEEHIIV_EMBED_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
+      })
+      .then(res => {
+        if (res.ok || res.status === 201) {
+          formEl.innerHTML = '<p class="text-green-700 font-semibold text-lg py-3">✓ You\'re subscribed! Check your inbox for a confirmation email.</p>';
+        } else {
+          buttonEl.disabled = false;
+          buttonEl.textContent = 'Subscribe — $4/month';
+          alert('Something went wrong. Please try again or visit savannah directly.');
+        }
+      })
+      .catch(() => {
+        buttonEl.disabled = false;
+        buttonEl.textContent = 'Subscribe — $4/month';
+        alert('Network error. Please try again.');
+      });
+
+      return false;
+    }
+  </script>
 </head>
 <body class="bg-white text-gray-900 antialiased">
 
@@ -60,10 +105,9 @@
 
       <!-- Subscribe Form -->
       <form
-        action="#"
-        method="POST"
+        id="hero-form"
         class="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
-        onsubmit="return false;"
+        onsubmit="return handleSubscribe(document.getElementById('hero-form'), document.getElementById('hero-btn'))"
       >
         <input
           type="email"
@@ -73,6 +117,7 @@
           class="flex-1 px-5 py-3 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-civic-navy focus:border-transparent text-base"
         />
         <button
+          id="hero-btn"
           type="submit"
           class="bg-civic-navy hover:bg-civic-darknavy text-white font-semibold px-7 py-3 rounded-md transition-colors duration-200 text-base whitespace-nowrap"
         >
@@ -144,10 +189,9 @@
       <h2 class="text-3xl font-bold mb-4">Ready to stay informed?</h2>
       <p class="text-blue-200 mb-8 text-lg">Join your neighbors who are following Savannah city government every week.</p>
       <form
-        action="#"
-        method="POST"
+        id="footer-form"
         class="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
-        onsubmit="return false;"
+        onsubmit="return handleSubscribe(document.getElementById('footer-form'), document.getElementById('footer-btn'))"
       >
         <input
           type="email"
@@ -157,6 +201,7 @@
           class="flex-1 px-5 py-3 border border-blue-400 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-civic-gold text-base"
         />
         <button
+          id="footer-btn"
           type="submit"
           class="bg-civic-gold hover:bg-yellow-600 text-civic-darknavy font-semibold px-7 py-3 rounded-md transition-colors duration-200 text-base whitespace-nowrap"
         >

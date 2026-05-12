@@ -1,0 +1,167 @@
+<svg viewBox="0 0 900 1400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .stage-title { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; fill: #333; }
+      .box-title { font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; fill: white; }
+      .box-text { font-family: system-ui, -apple-system, sans-serif; font-size: 11px; fill: white; }
+      .main-title { font-family: system-ui, -apple-system, sans-serif; font-size: 28px; font-weight: 700; fill: #1a1a1a; }
+      .badge { font-family: system-ui, -apple-system, sans-serif; font-size: 9px; font-weight: 700; fill: white; }
+      .arrow { stroke: #999; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .divider { stroke: #e0e0e0; stroke-width: 1; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#999" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="1400" fill="#fafafa"/>
+
+  <!-- Main Title -->
+  <text x="450" y="45" text-anchor="middle" class="main-title">AI Civic Newsletter — System Architecture</text>
+
+  <!-- STAGE 1: CITY ONBOARDING -->
+  <text x="50" y="100" class="stage-title">1 — CITY ONBOARDING (NEW)</text>
+
+  <rect x="80" y="120" width="340" height="100" rx="8" fill="#0a9b9b" opacity="0.9"/>
+  <text x="100" y="145" class="box-title">City Operator Input</text>
+  <text x="100" y="165" class="box-text">• Provides URL list (meeting archives,</text>
+  <text x="100" y="178" class="box-text">agendas, minutes pages)</text>
+  <text x="100" y="191" class="box-text">• Stored in city profile in database</text>
+  <text x="100" y="204" class="box-text">• Ready for crawler ingestion</text>
+
+  <!-- NEW badge -->
+  <rect x="310" y="125" width="28" height="16" rx="3" fill="#d32f2f"/>
+  <text x="324" y="135" text-anchor="middle" class="badge">NEW</text>
+
+  <!-- STAGE 2: CRAWLER & TRANSCRIPTION -->
+  <text x="50" y="280" class="stage-title">2 — CRAWLER & TRANSCRIPTION</text>
+
+  <rect x="50" y="300" width="270" height="110" rx="8" fill="#7c5fa2"/>
+  <text x="70" y="325" class="box-title">URL-based Crawler</text>
+  <text x="70" y="342" class="box-text">• Reads provided archive URLs</text>
+  <text x="70" y="355" class="box-text">• PDF/HTML text extraction</text>
+  <text x="70" y="368" class="box-text">• Stores raw documents</text>
+
+  <rect x="380" y="300" width="270" height="110" rx="8" fill="#7c5fa2"/>
+  <text x="400" y="325" class="box-title">Video Transcription</text>
+  <text x="400" y="342" class="box-text">• AssemblyAI API integration</text>
+  <text x="400" y="355" class="box-text">• Raw text output</text>
+  <text x="400" y="368" class="box-text">• Ready for analysis</text>
+
+  <rect x="710" y="300" width="140" height="110" rx="8" fill="#7c5fa2"/>
+  <text x="730" y="325" class="box-title">Data Store</text>
+  <text x="730" y="342" class="box-text">• Supabase DB</text>
+  <text x="730" y="355" class="box-text">• Raw content</text>
+  <text x="730" y="368" class="box-text">• Metadata</text>
+
+  <!-- STAGE 3: AI ANALYSIS PIPELINE -->
+  <text x="50" y="480" class="stage-title">3 — AI ANALYSIS PIPELINE</text>
+
+  <rect x="40" y="500" width="180" height="100" rx="8" fill="#d9875f"/>
+  <text x="60" y="525" class="box-title">Summarize</text>
+  <text x="60" y="542" class="box-text">• Key decisions</text>
+  <text x="60" y="555" class="box-text">• Votes & motions</text>
+  <text x="60" y="568" class="box-text">• Notable names</text>
+
+  <rect x="260" y="500" width="180" height="100" rx="8" fill="#d9875f"/>
+  <text x="280" y="525" class="box-title">Web Research</text>
+  <text x="280" y="542" class="box-text">• Cross-reference</text>
+  <text x="280" y="555" class="box-text">local news, polls</text>
+  <text x="280" y="568" class="box-text">• Enrichment layer</text>
+
+  <!-- NEW badge -->
+  <rect x="355" y="505" width="28" height="16" rx="3" fill="#d32f2f"/>
+  <text x="369" y="515" text-anchor="middle" class="badge">NEW</text>
+
+  <rect x="480" y="500" width="180" height="100" rx="8" fill="#d9875f"/>
+  <text x="500" y="525" class="box-title">Categorize</text>
+  <text x="500" y="542" class="box-text">• Taxes, safety,</text>
+  <text x="500" y="555" class="box-text">schools, etc.</text>
+  <text x="500" y="568" class="box-text">• Topic tagging</text>
+
+  <rect x="700" y="500" width="160" height="100" rx="8" fill="#d9875f"/>
+  <text x="720" y="525" class="box-title">Score Impact</text>
+  <text x="720" y="542" class="box-text">• Rank by</text>
+  <text x="720" y="555" class="box-text">relevance +</text>
+  <text x="720" y="568" class="box-text">impact</text>
+
+  <!-- QC Row -->
+  <rect x="300" y="630" width="300" height="80" rx="8" fill="#d9875f"/>
+  <text x="320" y="655" class="box-title">QC / Fact-Check</text>
+  <text x="320" y="672" class="box-text">• Accuracy verification  • Remove duplicates  • Confidence scoring</text>
+
+  <!-- STAGE 4: NEWSLETTER OUTPUT -->
+  <text x="50" y="790" class="stage-title">4 — NEWSLETTER OUTPUT</text>
+
+  <rect x="80" y="810" width="280" height="100" rx="8" fill="#e876a0"/>
+  <text x="100" y="835" class="box-title">Newsletter Builder</text>
+  <text x="100" y="852" class="box-text">• Formatted & branded</text>
+  <text x="100" y="865" class="box-text">• Readable layout</text>
+  <text x="100" y="878" class="box-text">• Custom templates</text>
+
+  <rect x="420" y="810" width="280" height="100" rx="8" fill="#e876a0"/>
+  <text x="440" y="835" class="box-title">Delivery Pipeline</text>
+  <text x="440" y="852" class="box-text">• Weekly digest schedule</text>
+  <text x="440" y="865" class="box-text">• Breaking alert triggers</text>
+  <text x="440" y="878" class="box-text">• Beehiiv integration</text>
+
+  <!-- STAGE 5: REVENUE STREAMS -->
+  <text x="50" y="1000" class="stage-title">5 — REVENUE STREAMS</text>
+
+  <rect x="80" y="1020" width="280" height="100" rx="8" fill="#4caf50"/>
+  <text x="100" y="1045" class="box-title">Subscriber Revenue</text>
+  <text x="100" y="1062" class="box-text">• Paid subscriptions</text>
+  <text x="100" y="1075" class="box-text">$5–9/month</text>
+  <text x="100" y="1088" class="box-text">• City residents</text>
+
+  <rect x="420" y="1020" width="280" height="100" rx="8" fill="#2196f3"/>
+  <text x="440" y="1045" class="box-title">Manager AI & Ad Layer</text>
+  <text x="440" y="1062" class="box-text">• Newsletter content →</text>
+  <text x="440" y="1075" class="box-text">geo-targeted FB ads</text>
+  <text x="440" y="1088" class="box-text">• Ad revenue share</text>
+
+  <!-- STAGE 6: GROWTH & SCALE -->
+  <text x="50" y="1210" class="stage-title">6 — GROWTH & SCALE</text>
+
+  <rect x="50" y="1230" width="260" height="110" rx="8" fill="#d0d0d0"/>
+  <text x="70" y="1255" class="box-title" fill="#333">City-by-City Rollout</text>
+  <text x="70" y="1272" class="box-text" fill="#333">• Same system for</text>
+  <text x="70" y="1285" class="box-text" fill="#333">new markets</text>
+  <text x="70" y="1298" class="box-text" fill="#333">• Multi-city platform</text>
+
+  <rect x="360" y="1230" width="260" height="110" rx="8" fill="#d0d0d0"/>
+  <text x="380" y="1255" class="box-title" fill="#333">Local Business Ads</text>
+  <text x="380" y="1272" class="box-text" fill="#333">• Second revenue</text>
+  <text x="380" y="1285" class="box-text" fill="#333">layer</text>
+  <text x="380" y="1298" class="box-text" fill="#333">• Targeted placement</text>
+
+  <rect x="670" y="1230" width="220" height="110" rx="8" fill="#d0d0d0"/>
+  <text x="690" y="1255" class="box-title" fill="#333">Premium Tier</text>
+  <text x="690" y="1272" class="box-text" fill="#333">• Deep dive reports</text>
+  <text x="690" y="1285" class="box-text" fill="#333">• Real-time alerts</text>
+  <text x="690" y="1298" class="box-text" fill="#333">• Higher value</text>
+
+  <!-- Connector Arrows -->
+  <!-- Stage 1 to Stage 2 -->
+  <line x1="250" y1="220" x2="250" y2="300" class="arrow"/>
+
+  <!-- Stage 2 to Stage 3 -->
+  <line x1="450" y1="410" x2="450" y2="500" class="arrow"/>
+
+  <!-- Stage 3 QC to Stage 4 -->
+  <line x1="450" y1="710" x2="450" y2="810" class="arrow"/>
+
+  <!-- Stage 4 to Stage 5 -->
+  <line x1="450" y1="910" x2="450" y2="1020" class="arrow"/>
+
+  <!-- Stage 5 to Stage 6 -->
+  <line x1="450" y1="1120" x2="450" y2="1230" class="arrow"/>
+
+  <!-- Horizontal dividers between stages -->
+  <line x1="40" y1="250" x2="860" y2="250" class="divider"/>
+  <line x1="40" y1="450" x2="860" y2="450" class="divider"/>
+  <line x1="40" y1="760" x2="860" y2="760" class="divider"/>
+  <line x1="40" y1="970" x2="860" y2="970" class="divider"/>
+  <line x1="40" y1="1180" x2="860" y2="1180" class="divider"/>
+</svg>

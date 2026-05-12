@@ -21,6 +21,14 @@ Track bugs, errors, and improvement opportunities from nightly pipeline runs.
 **Proposed fix:** Add NovusAgenda to CIVIC_PORTAL_PATTERNS in civic-crawler, add topeka.novusagenda.com as a seed path.
 **Status:** Open — needs Edge Function update. **This is the primary blocker for Topeka launch.**
 
+### ISS-008: QC fact-checker too strict on imprecise-but-accurate summaries
+**Discovered:** 2026-04-14
+**Severity:** Low (no incorrect drops, but high-value stories lost)
+**Description:** Two high-value Birmingham stories (Village Creek Trail $347K, HUD CDBG-DR $3.9M) were dropped because the fact-checker flagged imprecise characterizations that are technically not wrong — just simplified. These represent the most substantive civic content in the pipeline.
+**Impact:** ~36% drop rate. 2 of 4 drops were correct, but 2 were borderline and lost meaningful content.
+**Proposed fix:** Adjust QC prompt to distinguish "factually incorrect" (hard fail) from "imprecise but directionally accurate" (soft pass with editor note), or add a revision path instead of binary approve/drop.
+**Status:** Open — low priority.
+
 ### ISS-005: Story quality — hollow placeholder content from boilerplate pages
 **Discovered:** 2026-04-13
 **Severity:** Low (QC catches these)
@@ -90,6 +98,97 @@ ALTER TABLE meetings ADD CONSTRAINT meetings_meeting_type_check CHECK (
 ---
 
 ## Daily Reports
+
+### Quality Review — 2026-04-14 (Scheduled Daily Review)
+
+**Reviewer:** Automated pipeline-issue-review task
+**Review time:** 2026-04-14 afternoon
+**Database state:** No new data since nightly run — all counts unchanged.
+
+**Story Quality Assessment (7 approved stories across all cities):**
+
+| # | City | Story | Category | Impact | Quality |
+|---|---|---|---|---|---|
+| 1 | Birmingham | Justice Grant $363K | Safety | High | Good — substantive, accurate |
+| 2 | Birmingham | Network Upgrade $348K | Budget | High | Good — substantive, accurate |
+| 3 | Birmingham | Graymont School $790K | Budget | High | Good — substantive, accurate |
+| 4 | Birmingham | Budget Committee notice | Budget | Medium | Thin — placeholder, no agenda details (ISS-005) |
+| 5 | Birmingham | Public Safety Committee E | Safety | Medium | Thin — placeholder, no agenda details (ISS-005) |
+| 6 | Savannah | Housing Affordability Workshop | Zoning | High | Good — substantive, accurate |
+| 7 | Savannah | Zoning/Dev Standards Review | Zoning | Medium | Good — slightly overlaps #6 but distinct angle |
+
+**Category and impact assignments:** All correct. No misclassifications found.
+**Factual red flags:** None in approved stories.
+
+**Dropped Story Review (4 dropped):**
+
+1. **Birmingham — Village Creek Trail ($347K, Parks):** Dropped by fact_checker for imprecise fund source characterization. The summary is broadly accurate but oversimplifies 4 fund types. **Assessment: Borderline drop.** The story is high-value civic content ($347K parks funding reallocation). The imprecision doesn't mislead readers.
+2. **Birmingham — HUD CDBG-DR ($3.9M, Budget):** Dropped by fact_checker — omitted submitter name, imprecise total ($3.9M vs $3,967,621.66). **Assessment: Borderline drop.** This is a high-value story ($3.9M disaster recovery reallocation). Math is correct, omissions are minor.
+3. **Birmingham — Transportation Committee:** Dropped for time discrepancy (source said "3:30 AM" likely typo, summary corrected to PM). **Assessment: Correct drop** — summary shouldn't silently correct source errors.
+4. **Savannah — Afternoon Council Meeting:** Dropped for claiming "full agenda available" when source only provided contact info. **Assessment: Correct drop** — factual overclaim.
+
+**New Issue Identified:**
+
+### ISS-008: QC fact-checker may be too strict on imprecise-but-accurate summaries
+**Discovered:** 2026-04-14 (quality review)
+**Severity:** Low (no incorrect drops, but valuable stories lost)
+**Description:** Two high-value Birmingham stories (Village Creek $347K, HUD CDBG $3.9M) were dropped because the fact-checker flagged imprecise characterizations that are technically not wrong — just simplified. These are exactly the kind of substantive, high-dollar civic stories that should make it into the newsletter.
+**Impact:** ~36% of generated stories are being dropped. While 2 of 4 drops were correct, the other 2 represent meaningful lost content.
+**Proposed fix:** Adjust the QC prompt to distinguish between "factually incorrect" (hard fail) and "imprecise but directionally accurate" (soft pass with editor note). Alternatively, add a "revision" path where borderline stories get sent back for a rewrite instead of being dropped outright.
+**Status:** Open — low priority. Not blocking, but would improve newsletter content density.
+
+**Pattern Check:**
+- **Topeka 0 meetings:** ISS-002 persists. NovusAgenda still not in crawler patterns.
+- **Source flagging:** 4 meetings remain `source_flagged` (3 Birmingham, 1 Savannah) — expected behavior per ISS-007 fix. Not a problem.
+- **Placeholder stories:** 2 of 5 approved Birmingham stories are thin notices (ISS-005 pattern). Represents 40% of Birmingham's approved content being low-value.
+- **No stuck meetings:** All meetings have reached terminal status (source_verified or source_flagged). No queued or stuck records.
+
+**Open Issues Summary:**
+| Issue | Severity | Status | Blocker? |
+|---|---|---|---|
+| ISS-001: WAF/IP blocking | Medium | Deferred | No (not affecting launch cities) |
+| ISS-002: Topeka NovusAgenda | Medium | Open | **Yes — blocks Topeka** |
+| ISS-005: Thin placeholder stories | Low | Open | No |
+| ISS-008: QC too strict on imprecision | Low | Open | No |
+
+**Health Assessment:**
+- **Birmingham: GREEN** — 5 approved stories (3 high-quality, 2 thin). Pipeline healthy.
+- **Savannah: GREEN** — 2 approved stories (both good quality). No new content since Apr 9 meeting.
+- **Topeka: RED** — ISS-002 persists. Zero meetings, zero stories. Primary action item.
+
+**No fixes deployed this review. No Edge Function changes needed.**
+
+---
+
+### Run Report — 2026-04-14 (Nightly Automated Run)
+
+**Run completed:** 2026-04-14 (automated nightly schedule)
+**Edge Function versions:** civic-crawler (latest), civic-transcribe (latest), civic-pipeline (latest)
+**Overall status:** Pipeline ran successfully end-to-end for Birmingham and Savannah. Topeka still blocked by ISS-002.
+
+| City | Crawler Meetings | DB Verified | Stories Generated | Approved | Dropped |
+|---|---|---|---|---|---|
+| Birmingham | 7 | 4 | 8 | 5 | 3 |
+| Savannah | 1 | 0 | 3 | 2 | 1 |
+| Topeka | 0 | 0 | 0 | 0 | 0 |
+
+**Issues observed this run:**
+1. **Topeka 0 meetings (ongoing — ISS-002):** Crawler returned 0 meetings for Topeka again. NovusAgenda platform patterns still not in civic-crawler. Logged and continued per pipeline spec.
+2. **Response body content filtering:** Edge Function response bodies were filtered by the browser extension used to execute fetch() calls, preventing detailed body inspection. HTTP status codes (all 200) and select JSON fields (array lengths, story approval counts) were successfully extracted via structured JS parsing. No pipeline steps failed.
+3. **Savannah DB verified count 0:** The meetings query shows 0 source_verified meetings for Savannah despite 2 approved stories. Likely meetings remain in `source_flagged` status (per ISS-007 fix) rather than `source_verified`. Stories are approved and valid; DB status label is cosmetic.
+
+**No new blocking issues introduced this run.**
+
+**Health assessment:**
+- **Birmingham: GREEN** — 5 approved stories total (3 high-impact, 2 medium). +1 new story from April 14 Public Safety Committee E meeting.
+- **Savannah: GREEN** — 2 approved stories (housing affordability), no new content. Crawler found 1 meeting (same as prior run).
+- **Topeka: RED** — ISS-002 persists. Zero meetings, zero stories.
+
+**Recommended actions (unchanged from 2026-04-13):**
+1. **Fix ISS-002** — Add NovusAgenda patterns to civic-crawler to unblock Topeka
+2. **Consider ISS-005** — Add content depth threshold to avoid thin placeholder stories
+
+---
 
 ### Run Report — 2026-04-13 (Full Pipeline Run)
 

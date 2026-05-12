@@ -12,6 +12,7 @@ import { runIngestionQC } from './agents/02-ingestion-qc.js';
 import { runTranscription } from './agents/03-transcription.js';
 import { runSourceVerifier } from './agents/03b-source-verifier.js';
 import { runSummarizer } from './agents/04-summarizer.js';
+import { runContextEnricher } from './agents/04b-context-enricher.js';
 import { runVerdict } from './agents/06-verdict.js';
 import { runNewsletterBuilder } from './agents/07-newsletter-builder.js';
 import { runStorySelector } from './agents/08-story-selector.js';
@@ -52,6 +53,14 @@ export async function runNightlyPipeline(cityId) {
     console.log('[Pipeline] Starting Agent 4: Summarizer...');
     const summaryResults = await runSummarizer(cityId);
     console.log(`[Pipeline] Summarizer done: ${summaryResults.storiesCreated} stories`);
+
+    // Agent 4b — Context Enricher (web research — adds background beyond transcript)
+    // Requires BRAVE_API_KEY in environment for web search; gracefully skips if absent.
+    console.log('[Pipeline] Starting Agent 4b: Context Enricher...');
+    const enrichResults = await runContextEnricher(cityId, {
+      braveApiKey: process.env.BRAVE_API_KEY || null,
+    });
+    console.log(`[Pipeline] Context Enricher done: ${enrichResults.enriched} enriched, ${enrichResults.skipped} no-context`);
 
     // Agents 5a/5b + 6 — QC + Verdict (may loop for revisions)
     console.log('[Pipeline] Starting Agents 5a/5b/6: QC + Verdict...');

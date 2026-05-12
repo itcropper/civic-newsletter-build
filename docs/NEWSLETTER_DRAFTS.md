@@ -96,6 +96,68 @@ _Stories accumulate here until weekly send._
 
 ---
 
+---
+
+## Birmingham, AL — New Stories — Run 2026-04-14
+
+### Approved Stories — Week of 2026-04-14
+
+**Source:** City Council Public Safety Committee E Meeting, April 14, 2026
+**Meeting location:** City Council Chambers, 710 20th Street North, Birmingham, AL
+
+---
+
+#### 1. Public Safety Committee E Convenes April 14
+**Category:** Safety | **Impact:** Medium
+
+The Birmingham City Council's Public Safety Committee E is scheduled to meet on April 14, 2026, from 1:00 PM to 2:30 PM at City Council Chambers, 710 20th Street North. The agenda has not been detailed in the available source material, but the committee is expected to take up public safety-related matters during the session.
+
+---
+
+**QC Summary (Birmingham — 2026-04-14 run):**
+- 7 meetings found by crawler (vs. 3 on 2026-04-13), 4 currently source_verified in DB
+- 8 stories generated, 5 approved, 3 dropped
+- 1 net-new story added to this run vs. previous: Public Safety Committee E (Medium/Safety)
+- High-impact stories (Graymont $790K, Justice Grant $363K, Network Upgrade $348K) re-verified and remain approved
+
+---
+
+## Savannah, GA — Run 2026-04-14
+
+### Pipeline Status — 2026-04-14
+
+**Meetings found by crawler:** 1 (same meeting as prior run)
+**Stories generated:** 3 | **Approved:** 2 | **No new stories since 2026-04-09 run**
+
+_Previously approved stories remain active — see "Week of 2026-04-09" section above._
+
+---
+
+## Topeka, KS — Run 2026-04-14
+
+### Pipeline Status — 2026-04-14
+
+**Meetings found:** 0
+**Stories approved:** 0
+**Status:** Crawler returned 0 meetings again. ISS-002 (NovusAgenda platform not in CIVIC_PORTAL_PATTERNS) remains the blocker. No change from 2026-04-13. Topeka is RED until ISS-002 is resolved.
+
+---
+
+## Pipeline Run Summary — 2026-04-14
+
+| City | Crawler Meetings Found | DB Meetings (verified) | Stories Generated | Approved | Notes |
+|---|---|---|---|---|---|
+| Birmingham | 7 | 4 | 8 | 5 | +1 new story vs. prior run |
+| Savannah | 1 | 0 | 3 | 2 | No new stories |
+| Topeka | 0 | 0 | 0 | 0 | ISS-002 blocker persists |
+| **Total** | **8** | **4** | **11** | **7** | **Cumulative approved across all runs** |
+
+**Edge Function versions:** civic-crawler (latest), civic-transcribe (latest), civic-pipeline (latest)
+**Run date:** 2026-04-14 (nightly automated run)
+**Overall health:** Birmingham GREEN, Savannah GREEN, Topeka RED
+
+---
+
 ## Pipeline Run Summary — 2026-04-13
 
 | City | Meetings | Stories Generated | Approved | Dropped | Pending |
