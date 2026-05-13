@@ -12,6 +12,7 @@ import { runIngestionQC } from './agents/02-ingestion-qc.js';
 import { runTranscription } from './agents/03-transcription.js';
 import { runSourceVerifier } from './agents/03b-source-verifier.js';
 import { runSummarizer } from './agents/04-summarizer.js';
+import { runSignalGate } from './agents/04c-signal-gate.js';
 import { runContextEnricher } from './agents/04b-context-enricher.js';
 import { runVerdict } from './agents/06-verdict.js';
 import { runNewsletterBuilder } from './agents/07-newsletter-builder.js';
@@ -54,6 +55,11 @@ export async function runNightlyPipeline(cityId) {
     const summaryResults = await runSummarizer(cityId);
     console.log(`[Pipeline] Summarizer done: ${summaryResults.storiesCreated} stories`);
 
+    // Agent 4c — Signal Gate (drops low-signal stories before we pay for enrichment)
+    console.log('[Pipeline] Starting Agent 4c: Signal Gate...');
+    const signalResults = await runSignalGate(cityId);
+    console.log(`[Pipeline] Signal Gate done: ${signalResults.gated} gated, ${signalResults.dropped} dropped`);
+
     // Agent 4b — Context Enricher (web research — adds background beyond transcript)
     // Requires BRAVE_API_KEY in environment for web search; gracefully skips if absent.
     console.log('[Pipeline] Starting Agent 4b: Context Enricher...');
@@ -85,6 +91,7 @@ export async function runNightlyPipeline(cityId) {
       ingestion: qcResults,
       transcription: transcriptResults,
       summary: summaryResults,
+      signalGate: signalResults,
       verdict: verdictResults,
     };
 
