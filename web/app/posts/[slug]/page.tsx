@@ -5,6 +5,7 @@ import { getCity } from '@/lib/city';
 import { getStoryBySlug, headline, formatDate } from '@/lib/stories';
 import { SourceBand } from '@/components/SourceBadge';
 import { ImpactPill } from '@/components/ImpactPill';
+import SubscribeForm from '@/components/SubscribeForm';
 
 export const revalidate = 300;
 export const dynamic = 'force-dynamic';
@@ -67,6 +68,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
           ))}
         </div>
       ) : null}
+      <SubscribeForm cityName={city.name} variant="footer" />
     </article>
   );
 }

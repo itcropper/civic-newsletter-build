@@ -41,8 +41,13 @@ Or use the GitHub website to add a new remote and push.
    | `CITY_SUBDOMAIN` | `birmingham-al` |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://yfynwejgbyeisharldyk.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (paste the legacy JWT anon key — see note below) |
+   | `BEEHIIV_API_KEY` | (Beehiiv API key — required for the on-page subscribe form) |
+   | `BEEHIIV_PUBLICATION_ID` | (fallback Beehiiv publication id, used when `cities.beehiiv_publication_id` is null) |
+   | `REQUEST_HASH_SALT` | any 32+ char random string (used to hash IPs for rate-limiting) |
 
    The site URL is derived from the request `Host` header at runtime, so there's no `NEXT_PUBLIC_SITE_URL` to set. RSS/Atom feeds, canonical tags, and OG metadata all build their absolute URLs from whatever hostname the visitor used to reach the site.
+
+   **Per-city Beehiiv publication** — `cities.beehiiv_publication_id` overrides `BEEHIIV_PUBLICATION_ID` when set. During the Birmingham-only phase you can leave the column null on every city and rely on the env-var fallback. When you spin up a second city's Beehiiv publication, set the column for that city to keep audiences separate.
 
    **Anon key note** — Use the **legacy** anon key (starts with `eyJ`), not the new `sb_publishable_...` format. Find it in Supabase Dashboard → Project Settings → API → "Legacy API keys" (or via the `get_publishable_keys` MCP call). Anon keys are designed to be public-facing — they identify the project, and Row Level Security on the database is what actually gates access.
 
