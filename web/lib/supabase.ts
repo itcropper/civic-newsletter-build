@@ -62,4 +62,6 @@ export type StoryRow = {
   published_at: string;
   qc_status: string;
   context_note: string | null;
+  source_url: string | null;
+  source_name: string | null;
 };

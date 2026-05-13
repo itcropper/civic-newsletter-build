@@ -1,12 +1,21 @@
 import { supabase, type StoryRow } from './supabase';
 import { getCity } from './city';
 
+const STORY_SELECT =
+  'id, city_id, slug, headline, summary_text, category, impact_score, ' +
+  'votes_json, tags, published_at, qc_status, context_note, ' +
+  'meetings(source_url, url)';
+
+type RawStoryRow = Omit<StoryRow, 'source_url' | 'source_name'> & {
+  meetings?: { source_url: string | null; url: string | null } | null;
+};
+
 /** Latest approved stories, most recent first. */
 export async function listStories(opts: { limit?: number; tag?: string } = {}): Promise<StoryRow[]> {
   const city = await getCity();
   let q = supabase
     .from('stories')
-    .select('id, city_id, slug, headline, summary_text, category, impact_score, votes_json, tags, published_at, qc_status, context_note')
+    .select(STORY_SELECT)
     .eq('city_id', city.id)
     .eq('qc_status', 'approved')
     .not('published_at', 'is', null)
@@ -18,20 +27,52 @@ export async function listStories(opts: { limit?: number; tag?: string } = {}): 
 
   const { data, error } = await q;
   if (error) throw new Error(`Failed to list stories: ${error.message}`);
-  return (data as StoryRow[]) || [];
+  return ((data as unknown as RawStoryRow[]) || []).map(flattenStory);
 }
 
 export async function getStoryBySlug(slug: string): Promise<StoryRow | null> {
   const city = await getCity();
   const { data, error } = await supabase
     .from('stories')
-    .select('id, city_id, slug, headline, summary_text, category, impact_score, votes_json, tags, published_at, qc_status, context_note')
+    .select(STORY_SELECT)
     .eq('city_id', city.id)
     .eq('slug', slug)
     .eq('qc_status', 'approved')
     .maybeSingle();
   if (error) throw new Error(`Failed to load story: ${error.message}`);
-  return data as StoryRow | null;
+  if (!data) return null;
+  return flattenStory(data as unknown as RawStoryRow);
+}
+
+/**
+ * Lift the joined `meetings.source_url` (and a derived `source_name` from its
+ * host) onto the top level so the rest of the web app doesn't have to think
+ * about the join shape.
+ */
+function flattenStory(row: RawStoryRow): StoryRow {
+  const sourceUrl = row.meetings?.source_url || row.meetings?.url || null;
+  const { meetings: _drop, ...rest } = row;
+  return {
+    ...rest,
+    source_url: sourceUrl,
+    source_name: sourceNameFromUrl(sourceUrl),
+  };
+}
+
+/**
+ * Friendly source label derived from a URL host. We strip "www." and any
+ * known archive-redirect prefixes, then return the bare host. Returns null
+ * if the URL is unparseable.
+ */
+export function sourceNameFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.host.toLowerCase().replace(/^www\./, '');
+    return host || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function listAllTags(): Promise<{ tag: string; count: number }[]> {
