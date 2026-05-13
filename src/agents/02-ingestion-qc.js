@@ -69,6 +69,17 @@ ${contentToScore.substring(0, 5000)}`;
 
       const scores = await callClaudeJSON(MODELS.HAIKU, QC_SYSTEM, userMsg, { maxTokens: 500 });
       const totalScore = scores.total_score || 0;
+      const wordCount = scores.content_length?.word_count ?? 0;
+
+      // Deterministic agenda-completeness guard: even when the Haiku score
+      // squeaks past threshold, refuse stub scrapes that have no real agenda.
+      // This is what kept the "no specific agenda items were listed" story
+      // from being dropped in earlier runs.
+      const agendaStubResult = checkAgendaStub({
+        meetingType: meeting.meeting_type,
+        wordCount,
+        contentToScore,
+      });
 
       // Update meeting with score
       const updates = {
@@ -76,7 +87,19 @@ ${contentToScore.substring(0, 5000)}`;
         meeting_date: scores.date_extractable?.extracted_date || meeting.meeting_date,
       };
 
-      if (totalScore >= effectiveThreshold) {
+      if (agendaStubResult.isStub) {
+        updates.status = 'skipped';
+        results.skipped++;
+
+        await supabase.from('qc_log').insert({
+          city_id: cityId,
+          meeting_id: meeting.id,
+          story_topic: meeting.meeting_type || 'unknown',
+          flagging_agent: 'ingestion_qc',
+          reason: `Skipped: agenda-stub guard tripped (${agendaStubResult.reason}). ` +
+            `LLM score was ${totalScore}.`,
+        });
+      } else if (totalScore >= effectiveThreshold) {
         updates.status = 'ingestion_passed';
         results.passed++;
       } else {
@@ -108,4 +131,47 @@ ${contentToScore.substring(0, 5000)}`;
 
   console.log(`[IngestionQC] ${city?.name}: ${results.passed} passed, ${results.skipped} skipped`);
   return results;
+}
+
+/**
+ * Detect ingestion-time stubs that shouldn't progress to summarization.
+ *
+ *   1. Short council/committee/board scrapes with < 400 words almost always
+ *      mean we only got the "this meeting is scheduled" preamble.
+ *   2. Stub phrasing ("no specific agenda items were listed", "agenda has not
+ *      been released", etc.) means no agenda was actually extractable.
+ *
+ * Either of these is enough to skip the meeting; otherwise it falls through
+ * to the normal scoring path.
+ */
+function checkAgendaStub({ meetingType, wordCount, contentToScore }) {
+  const text = (contentToScore || '').toLowerCase();
+
+  const STUB_PHRASES = [
+    'no specific agenda items were listed',
+    'no specific agenda items was listed',
+    'agenda has not been released',
+    'agenda has not been published',
+    'agenda was not posted',
+    'no agenda items available',
+    'no agenda items provided',
+  ];
+  for (const phrase of STUB_PHRASES) {
+    if (text.includes(phrase)) {
+      return { isStub: true, reason: `matched stub phrase "${phrase}"` };
+    }
+  }
+
+  const lowerType = (meetingType || '').toLowerCase();
+  const isCouncilLike = ['council', 'committee', 'board', 'commission'].some(w =>
+    lowerType.includes(w)
+  );
+  if (isCouncilLike && wordCount > 0 && wordCount < 400) {
+    return {
+      isStub: true,
+      reason: `${meetingType} scrape only ${wordCount} words (< 400) — likely missing agenda`,
+    };
+  }
+
+  return { isStub: false };
 }
