@@ -1,6 +1,11 @@
-# Deploying a city blog to Vercel (MVP)
+# Deploying a city blog to Vercel
 
-This guide deploys one Birmingham site to `birmingham-civic.vercel.app` (free tier, no domain purchase, no Pro plan).
+City resolution is data-driven. The code asks the `cities` table which city a request belongs to, using the request's `Host` header. Two deployment modes use the same code:
+
+- **Multi-tenant (production):** one Vercel project serves every city. `birmingham.civicwire.com`, `savannah.civicwire.com`, etc. all hit the same deployment and resolve their city from the Host header against the database. Requires a custom domain with wildcard DNS and Vercel Pro.
+- **Single-tenant (MVP / free-tier):** one Vercel project per city, each at its own `*.vercel.app` URL. The Host header doesn't expose a usable subdomain on free tier, so the `CITY_SUBDOMAIN` env var fills that role for one city at a time. The cities table is still the source of truth — the env var just names which row this deployment renders.
+
+This guide covers the MVP single-tenant path (no domain purchase, no Pro plan). The multi-tenant config is at the bottom.
 
 Total time: ~10 minutes for the first city, ~5 minutes for each subsequent city.
 
@@ -90,3 +95,15 @@ These are acceptable for MVP but should be scripted by Phase 4:
 - One `*.vercel.app` subdomain per project (we use one project per city).
 - Build minutes are not metered on Hobby plan.
 - No wildcard domain support — that's the only reason Pro would be needed at scale.
+
+## Multi-tenant config (future, once you own civicwire.com + Vercel Pro)
+
+When you're ready to consolidate cities onto one deployment:
+
+1. Buy `civicwire.com` (or whatever umbrella you choose).
+2. Add it to the Vercel project as a custom domain. Add `*.civicwire.com` as a wildcard. Vercel auto-provisions an SSL cert per requested subdomain.
+3. In Vercel env vars, **add** `UMBRELLA_DOMAIN=civicwire.com` and **remove** `CITY_SUBDOMAIN`.
+4. Point DNS so `*.civicwire.com` resolves to Vercel (CNAME or A record per Vercel's instructions).
+5. Done. From that point on, adding a new city means inserting a row in `cities` with a new `subdomain` value — no code change, no env var change, no redeploy.
+
+If both `UMBRELLA_DOMAIN` and `CITY_SUBDOMAIN` are set, the umbrella host match wins when the request matches the wildcard, and the env var only resolves requests that don't match (useful during cutover).

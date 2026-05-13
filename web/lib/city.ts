@@ -1,9 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { headers } from 'next/headers';
 import { supabase, type CityRow, type BrandingPayload } from './supabase';
-
-// Each deployment is single-tenant. CITY_SUBDOMAIN is set at build time.
-const CITY_SUBDOMAIN = process.env.CITY_SUBDOMAIN || 'birmingham';
 
 const DEFAULT_BRANDING: BrandingPayload = {
   hero_url: null,
@@ -12,9 +10,51 @@ const DEFAULT_BRANDING: BrandingPayload = {
   source: 'default',
 };
 
+// Optional umbrella domain for multi-tenant deploys (e.g. `civicwire.com`).
+// When set, `birmingham.civicwire.com` -> subdomain `birmingham`.
+const UMBRELLA_DOMAIN = (process.env.UMBRELLA_DOMAIN || '').toLowerCase();
+
+// Optional explicit override for single-tenant deploys (one Vercel project per
+// city on free-tier *.vercel.app, local dev, preview builds). Used only when
+// the host header doesn't reveal a subdomain.
+const FALLBACK_SUBDOMAIN = process.env.CITY_SUBDOMAIN || '';
+
 /**
- * Reads /branding/{subdomain}/colors.json or /branding/{subdomain}/hero.{jpg,png}
- * Returns a partial branding payload that overrides whatever's in the DB.
+ * Determine the city subdomain from the incoming request, data-driven.
+ *
+ * Resolution order:
+ *  1. Host header against UMBRELLA_DOMAIN (production multi-tenant case).
+ *  2. CITY_SUBDOMAIN env var (single-tenant fallback for free-tier Vercel).
+ *  3. Hard error -- misconfigured.
+ *
+ * The cities table remains the source of truth: whatever subdomain this
+ * function returns is looked up in `cities.subdomain` before anything renders.
+ */
+function resolveCitySubdomain(): string {
+  let host = '';
+  try {
+    host = (headers().get('host') || '').split(':')[0].toLowerCase();
+  } catch {
+    // headers() can throw outside a request scope (e.g. some build-time paths).
+    // Fall through to env-var fallback.
+  }
+
+  if (UMBRELLA_DOMAIN && host.endsWith('.' + UMBRELLA_DOMAIN)) {
+    const sub = host.slice(0, host.length - UMBRELLA_DOMAIN.length - 1);
+    if (sub && sub !== 'www') return sub;
+  }
+
+  if (FALLBACK_SUBDOMAIN) return FALLBACK_SUBDOMAIN;
+
+  throw new Error(
+    `Cannot resolve city subdomain. Request host '${host}' did not match UMBRELLA_DOMAIN ` +
+      `('${UMBRELLA_DOMAIN}') and CITY_SUBDOMAIN fallback is not set.`
+  );
+}
+
+/**
+ * Reads web/branding/{subdomain}/colors.json or hero.{jpg,png,webp}.
+ * Overrides take precedence over branding_json from the DB.
  */
 async function readOverride(subdomain: string): Promise<Partial<BrandingPayload>> {
   const dir = path.join(process.cwd(), 'branding', subdomain);
@@ -30,7 +70,6 @@ async function readOverride(subdomain: string): Promise<Partial<BrandingPayload>
   for (const ext of ['jpg', 'jpeg', 'png', 'webp']) {
     try {
       await fs.access(path.join(dir, `hero.${ext}`));
-      // Local override: served from /branding/{subdomain}/hero.{ext}
       override.hero_url = `/branding/${subdomain}/hero.${ext}`;
       break;
     } catch { /* try next */ }
@@ -41,16 +80,15 @@ async function readOverride(subdomain: string): Promise<Partial<BrandingPayload>
 }
 
 /**
- * Same as getCity but returns a placeholder when Supabase is unreachable or
- * env vars are missing. Used by the layout so a build can still produce a
- * shell even if data fetches fail. Pages still use getCity() and crash
- * loudly so misconfiguration is visible.
+ * Resilient variant used by the root layout. Returns a placeholder if the
+ * city can't be resolved or Supabase is unreachable. Pages should use
+ * getCity() so misconfiguration surfaces visibly.
  */
 export async function getCityOrFallback(): Promise<CityRow & { branding: BrandingPayload }> {
   try {
     return await getCity();
-  } catch (err) {
-    const subdomain = CITY_SUBDOMAIN;
+  } catch {
+    const subdomain = FALLBACK_SUBDOMAIN || 'unknown';
     const name = subdomain.replace(/(^|-)([a-z])/g, (_, sep, ch) => (sep ? ' ' : '') + ch.toUpperCase());
     const override = await readOverride(subdomain).catch(() => ({}));
     return {
@@ -64,24 +102,21 @@ export async function getCityOrFallback(): Promise<CityRow & { branding: Brandin
   }
 }
 
-/** Loads the city + final branding payload (override > db > default). */
+/** Loads the city for the current request + final branding payload (override > db > default). */
 export async function getCity(): Promise<CityRow & { branding: BrandingPayload }> {
+  const subdomain = resolveCitySubdomain();
+
   const { data, error } = await supabase
     .from('cities')
     .select('id, name, subdomain, timezone, branding_json')
-    .eq('subdomain', CITY_SUBDOMAIN)
+    .eq('subdomain', subdomain)
     .eq('active', true)
     .maybeSingle();
 
-  if (error) throw new Error(`Failed to load city: ${error.message}`);
-  if (!data) {
-    throw new Error(
-      `No active city for subdomain '${CITY_SUBDOMAIN}'. ` +
-        `Set CITY_SUBDOMAIN env var to a row in the cities table where active=true.`
-    );
-  }
+  if (error) throw new Error(`Failed to load city for subdomain '${subdomain}': ${error.message}`);
+  if (!data) throw new Error(`No active city found for subdomain '${subdomain}'. Add a row in cities with subdomain='${subdomain}' and active=true.`);
 
-  const override = await readOverride(CITY_SUBDOMAIN);
+  const override = await readOverride(subdomain);
   const branding: BrandingPayload = {
     ...DEFAULT_BRANDING,
     ...(data.branding_json || {}),

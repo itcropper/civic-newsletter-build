@@ -1,11 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Each Vercel deployment is bound to exactly one city via CITY_SUBDOMAIN.
-  // Exposing it publicly so client components can read it for analytics, etc.
-  env: {
-    NEXT_PUBLIC_CITY_SUBDOMAIN: process.env.CITY_SUBDOMAIN || 'birmingham',
-  },
+  // Routing is request-time and data-driven: the Host header maps to a
+  // cities row via lib/city.ts. No build-time city baked into the bundle.
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'upload.wikimedia.org' },
