@@ -53,6 +53,7 @@ export type StoryRow = {
   id: string;
   city_id: string;
   slug: string;
+  headline: string | null;
   summary_text: string;
   category: string | null;
   impact_score: string | null;

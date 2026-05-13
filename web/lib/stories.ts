@@ -6,7 +6,7 @@ export async function listStories(opts: { limit?: number; tag?: string } = {}): 
   const city = await getCity();
   let q = supabase
     .from('stories')
-    .select('id, city_id, slug, summary_text, category, impact_score, votes_json, tags, published_at, qc_status, context_note')
+    .select('id, city_id, slug, headline, summary_text, category, impact_score, votes_json, tags, published_at, qc_status, context_note')
     .eq('city_id', city.id)
     .eq('qc_status', 'approved')
     .not('published_at', 'is', null)
@@ -25,7 +25,7 @@ export async function getStoryBySlug(slug: string): Promise<StoryRow | null> {
   const city = await getCity();
   const { data, error } = await supabase
     .from('stories')
-    .select('id, city_id, slug, summary_text, category, impact_score, votes_json, tags, published_at, qc_status, context_note')
+    .select('id, city_id, slug, headline, summary_text, category, impact_score, votes_json, tags, published_at, qc_status, context_note')
     .eq('city_id', city.id)
     .eq('slug', slug)
     .eq('qc_status', 'approved')
@@ -45,8 +45,17 @@ export async function listAllTags(): Promise<{ tag: string; count: number }[]> {
     .sort((a, b) => b.count - a.count);
 }
 
-/** Plain-text headline from the first sentence of summary_text, truncated. */
+/**
+ * Headline for a story. Prefers the Claude-generated `headline` column added
+ * in migration 008; falls back to the legacy first-sentence-of-summary for
+ * any pre-008 rows that still have a null headline.
+ */
 export function headline(s: StoryRow, max = 110): string {
+  if (s.headline) {
+    return s.headline.length > max
+      ? s.headline.slice(0, max - 1).trimEnd() + '\u2026'
+      : s.headline;
+  }
   const first = (s.summary_text || '').split(/(?<=[.!?])\s+/)[0] || s.summary_text || '';
   return first.length > max ? first.slice(0, max - 1).trimEnd() + '\u2026' : first;
 }
