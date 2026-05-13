@@ -21,7 +21,6 @@ import path from 'node:path';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const SITE_URL_TEMPLATE = process.env.SITE_URL_TEMPLATE || 'https://{subdomain}-civic.vercel.app';
 
 if (!SUPABASE_URL || !SERVICE_KEY || !ANTHROPIC_KEY) {
   console.error('Need SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY in .env');
@@ -107,13 +106,20 @@ function buildUtmUrl(siteUrl, slug, platform, campaign) {
 async function main() {
   console.log(`\nGenerating ad creative for ${cityName} on platforms: ${platforms.join(', ')}\n`);
 
-  // Find the city.
+  // Find the city. site_url is the data-driven source for ad destinations --
+  // no env-var template, no CLI flag. Update the cities row when the domain
+  // changes (e.g. after cutting over from *.vercel.app to a real domain).
   const { data: city, error: cityErr } = await sb
     .from('cities')
-    .select('id, name, subdomain, branding_json')
+    .select('id, name, subdomain, branding_json, site_url')
     .eq('name', cityName)
     .single();
   if (cityErr || !city) throw new Error(`City not found: ${cityName}`);
+  if (!city.site_url) {
+    throw new Error(
+      `City '${cityName}' has no site_url set. Run: UPDATE cities SET site_url='https://...' WHERE name='${cityName}';`
+    );
+  }
 
   // Pick the story: explicit ID, or the most recent High-impact approved one.
   let storyQuery = sb

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { getCity, getCityOrFallback } from '@/lib/city';
+import { getCityOrFallback } from '@/lib/city';
+import { getBaseUrl } from '@/lib/feeds';
 import './globals.css';
 
 // Force all pages through this layout to be rendered dynamically.
@@ -11,7 +12,10 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const city = await getCityOrFallback();
+  let metadataBase: URL | undefined;
+  try { metadataBase = new URL(getBaseUrl()); } catch { /* leave undefined */ }
   return {
+    metadataBase,
     title: { default: `${city.name} Civic`, template: `%s \u2014 ${city.name} Civic` },
     description: `Plain-language coverage of public meetings in ${city.name}. Updated regularly.`,
     alternates: {

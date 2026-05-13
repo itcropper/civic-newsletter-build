@@ -39,9 +39,10 @@ Or use the GitHub website to add a new remote and push.
    | `CITY_SUBDOMAIN` | `birmingham` |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://yfynwejgbyeisharldyk.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (paste the legacy JWT anon key — see note below) |
-   | `NEXT_PUBLIC_SITE_URL` | `https://birmingham-civic.vercel.app` |
 
-   **Anon key note** — Use the **legacy** anon key (starts with `eyJ`), not the new `sb_publishable_...` format. Find it in Supabase Dashboard → Project Settings → API → "Legacy API keys" (or via the `get_publishable_keys` MCP call). Anon keys are designed to be public-facing, so they're safe in browser-bundled env vars.
+   The site URL is derived from the request `Host` header at runtime, so there's no `NEXT_PUBLIC_SITE_URL` to set. RSS/Atom feeds, canonical tags, and OG metadata all build their absolute URLs from whatever hostname the visitor used to reach the site.
+
+   **Anon key note** — Use the **legacy** anon key (starts with `eyJ`), not the new `sb_publishable_...` format. Find it in Supabase Dashboard → Project Settings → API → "Legacy API keys" (or via the `get_publishable_keys` MCP call). Anon keys are designed to be public-facing — they identify the project, and Row Level Security on the database is what actually gates access.
 
 7. Click **Deploy**. First build takes 1-2 minutes.
 
@@ -65,9 +66,7 @@ For Savannah (or any other city):
 1. Vercel → New Project → import the same repo.
 2. Root Directory: `web`.
 3. Project name: `savannah-civic`.
-4. Same env vars **but**:
-   - `CITY_SUBDOMAIN=savannah`
-   - `NEXT_PUBLIC_SITE_URL=https://savannah-civic.vercel.app`
+4. Same env vars **but** `CITY_SUBDOMAIN=savannah`. Also `UPDATE cities SET site_url='https://savannah-civic.vercel.app' WHERE name='Savannah';` in Supabase so the ad-creative script knows where to point ads for that city.
 5. Deploy.
 
 That's it. Same codebase, different env vars per project. No code shared between cities at runtime — each deployment loads only its own city's data. There is no cross-city navigation anywhere in the codebase.

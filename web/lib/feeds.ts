@@ -1,8 +1,19 @@
-import type { CityRow, BrandingPayload } from './supabase';
-import type { StoryRow } from './supabase';
+import type { CityRow, BrandingPayload, StoryRow } from './supabase';
+import { headers } from 'next/headers';
 import { headline } from './stories';
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com').replace(/\/+$/, '');
+/**
+ * Compute the absolute base URL for outbound links (RSS items, Atom entries,
+ * canonical tags) from the current request. No env var, no config -- the URL
+ * a reader hits to fetch the feed is the same URL we put inside the feed.
+ */
+export function getBaseUrl(): string {
+  const h = headers();
+  const host = h.get('host') || 'localhost:3000';
+  const fwdProto = h.get('x-forwarded-proto');
+  const proto = fwdProto || (host.startsWith('localhost') ? 'http' : 'https');
+  return `${proto}://${host}`.replace(/\/+$/, '');
+}
 
 function xmlEscape(s: string): string {
   return s
@@ -13,15 +24,12 @@ function xmlEscape(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function postUrl(slug: string): string {
-  return `${SITE_URL}/posts/${encodeURIComponent(slug)}`;
-}
-
 export function renderRss(city: CityRow & { branding: BrandingPayload }, stories: StoryRow[]): string {
+  const base = getBaseUrl();
   const lastPub = stories[0]?.published_at || new Date().toISOString();
   const items = stories
     .map((s) => {
-      const url = postUrl(s.slug);
+      const url = `${base}/posts/${encodeURIComponent(s.slug)}`;
       const title = xmlEscape(headline(s, 140));
       const body = xmlEscape(s.summary_text);
       const cats = (s.tags || []).map((t) => `<category>${xmlEscape(t)}</category>`).join('');
@@ -40,8 +48,8 @@ export function renderRss(city: CityRow & { branding: BrandingPayload }, stories
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${xmlEscape(city.name + ' Civic')}</title>
-    <link>${SITE_URL}</link>
-    <atom:link href="${SITE_URL}/rss.xml" rel="self" type="application/rss+xml" />
+    <link>${base}</link>
+    <atom:link href="${base}/rss.xml" rel="self" type="application/rss+xml" />
     <description>Plain-language coverage of public meetings in ${xmlEscape(city.name)}.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date(lastPub).toUTCString()}</lastBuildDate>
@@ -51,10 +59,11 @@ ${items}
 }
 
 export function renderAtom(city: CityRow & { branding: BrandingPayload }, stories: StoryRow[]): string {
+  const base = getBaseUrl();
   const updated = stories[0]?.published_at || new Date().toISOString();
   const entries = stories
     .map((s) => {
-      const url = postUrl(s.slug);
+      const url = `${base}/posts/${encodeURIComponent(s.slug)}`;
       return `  <entry>
     <title>${xmlEscape(headline(s, 140))}</title>
     <id>${url}</id>
@@ -68,9 +77,9 @@ export function renderAtom(city: CityRow & { branding: BrandingPayload }, storie
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>${xmlEscape(city.name + ' Civic')}</title>
-  <id>${SITE_URL}/</id>
-  <link href="${SITE_URL}/"/>
-  <link rel="self" href="${SITE_URL}/atom.xml"/>
+  <id>${base}/</id>
+  <link href="${base}/"/>
+  <link rel="self" href="${base}/atom.xml"/>
   <updated>${new Date(updated).toISOString()}</updated>
   <subtitle>Plain-language coverage of public meetings in ${xmlEscape(city.name)}.</subtitle>
 ${entries}
