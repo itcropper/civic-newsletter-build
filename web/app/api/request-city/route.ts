@@ -65,13 +65,15 @@ export async function POST(req: Request) {
 
   const userAgent = req.headers.get('user-agent')?.slice(0, 500) || null;
 
-  const { error } = await supabase.from('city_requests').insert({
-    city_name: cityName,
-    state,
-    email,
-    source: 'splash_form',
-    user_agent: userAgent,
-    ip_hash: ipHash,
+  // Call the SECURITY DEFINER function rather than INSERTing directly.
+  // city_requests stays anon-write-disabled at the table level; the function
+  // is the only public insert path and re-validates input as defense in depth.
+  const { error } = await supabase.rpc('submit_city_request', {
+    p_city_name: cityName,
+    p_state: state,
+    p_email: email,
+    p_user_agent: userAgent,
+    p_ip_hash: ipHash,
   });
 
   if (error) {
