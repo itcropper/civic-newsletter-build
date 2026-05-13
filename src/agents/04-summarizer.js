@@ -37,10 +37,26 @@ For each meeting transcript provided, identify 2–5 key topics or decisions. Fo
 5. Extract all votes into an array: [{"motion": "...", "result": "passed/failed", "vote_count": "5-2", "names_for": ["..."], "names_against": ["..."]}]
    - Include individual vote breakdowns by name if available in the transcript
 
+HEADLINE RULES (strict):
+- 6 to 10 words. No trailing punctuation.
+- Lead with the decision, vote, action window, or material change — never with "Meeting is", "Committee will", "Council to discuss", or any phrasing that signals procedure rather than news.
+- Use active voice, present or past tense. Include the specific subject (council body, named person, dollar amount, location) when it fits.
+- If nothing decided and no action window exists, you should not be writing a story at all — return fewer stories rather than padding with non-news.
+
+Good headlines:
+  - "Council awards $4.2M Avondale water-main contract"
+  - "Vote splits 4-3 against new short-term-rental fee"
+  - "Public hearing Monday on Five Points rezoning"
+
+Bad headlines (do not produce):
+  - "Council holds meeting to discuss water issue"
+  - "Budget and Finance Committee schedules April meeting"
+  - "Officials gather to review department updates"
+
 Return JSON array:
 [
   {
-    "headline": "short descriptive headline (max 12 words)",
+    "headline": "6-10 word news headline following the rules above",
     "summary": "80-150 word story with names, amounts, and specifics",
     "context_note": "1-2 sentence factual background note, or empty string",
     "category": "Budget|Safety|Schools|Roads|Zoning|Parks|Utilities|Other",
@@ -102,6 +118,7 @@ ${meeting.transcript_text.substring(0, 30000)}`;
       const storyRows = stories.map(s => ({
         meeting_id: meeting.id,
         city_id: cityId,
+        headline: s.headline ? String(s.headline).trim() : null,
         summary_text: s.summary,
         context_note: s.context_note || null,
         category: s.category,
