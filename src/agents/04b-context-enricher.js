@@ -30,7 +30,7 @@
  */
 
 import supabase from '../config/db.js';
-import { callClaudeText, MODELS } from '../config/anthropic.js';
+import { callClaude, MODELS } from '../config/anthropic.js';
 
 const ENRICHER_SYSTEM = `You are a research assistant for a civic journalism newsletter. Your job is to find reliable public-interest context that a local journalist would want to include when covering a city government story.
 
@@ -171,7 +171,7 @@ Web search query used: "${query}"
 Search results:
 ${formatSearchResults(searchResults)}`;
 
-      const contextNote = await callClaudeText(
+      const contextNote = await callClaude(
         MODELS.SONNET,
         ENRICHER_SYSTEM,
         userMsg,
