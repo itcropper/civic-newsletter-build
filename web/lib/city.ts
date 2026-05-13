@@ -25,12 +25,9 @@ const FALLBACK_SUBDOMAIN = process.env.CITY_SUBDOMAIN || '';
  * Resolution order:
  *  1. Host header against UMBRELLA_DOMAIN (production multi-tenant case).
  *  2. CITY_SUBDOMAIN env var (single-tenant fallback for free-tier Vercel).
- *  3. Hard error -- misconfigured.
- *
- * The cities table remains the source of truth: whatever subdomain this
- * function returns is looked up in `cities.subdomain` before anything renders.
+ *  3. null -- caller decides whether this is splash or an error.
  */
-function resolveCitySubdomain(): string {
+function resolveCitySubdomain(): string | null {
   let host = '';
   try {
     host = (headers().get('host') || '').split(':')[0].toLowerCase();
@@ -46,10 +43,16 @@ function resolveCitySubdomain(): string {
 
   if (FALLBACK_SUBDOMAIN) return FALLBACK_SUBDOMAIN;
 
-  throw new Error(
-    `Cannot resolve city subdomain. Request host '${host}' did not match UMBRELLA_DOMAIN ` +
-      `('${UMBRELLA_DOMAIN}') and CITY_SUBDOMAIN fallback is not set.`
-  );
+  return null;
+}
+
+/**
+ * True when this request should render the splash page rather than a city
+ * blog. The condition is "we could not resolve a city subdomain from either
+ * UMBRELLA_DOMAIN host parsing or the CITY_SUBDOMAIN env fallback".
+ */
+export function isSplashRequest(): boolean {
+  return resolveCitySubdomain() === null;
 }
 
 /**
@@ -118,6 +121,11 @@ export function formatCityCompact(city: Pick<CityRow, 'name' | 'state_code'>): s
 /** Loads the city for the current request + final branding payload (override > db > default). */
 export async function getCity(): Promise<CityRow & { branding: BrandingPayload }> {
   const subdomain = resolveCitySubdomain();
+  if (!subdomain) {
+    throw new Error(
+      'Cannot resolve city subdomain. Request did not match UMBRELLA_DOMAIN and CITY_SUBDOMAIN fallback is not set.'
+    );
+  }
 
   const { data, error } = await supabase
     .from('cities')
@@ -137,4 +145,66 @@ export async function getCity(): Promise<CityRow & { branding: BrandingPayload }
   };
 
   return { ...(data as CityRow), branding };
+}
+
+/**
+ * List active cities that have at least one approved, published story. Used
+ * by the splash page to show "we cover these places today" cards. Public
+ * stories table read; falls back to active-cities-only when stories table
+ * isn't readable (will matter after the RLS lockdown).
+ */
+export async function listActiveCitiesWithStories(): Promise<
+  Array<{
+    id: string;
+    name: string;
+    state: string | null;
+    state_code: string | null;
+    subdomain: string;
+    site_url: string | null;
+    latest_at: string | null;
+  }>
+> {
+  // We rely on a single join: cities -> stories(published_at). Anon can read
+  // both today; after lockdown both still get anon select policies because
+  // they're the rendered content.
+  const { data, error } = await supabase
+    .from('cities')
+    .select('id, name, state, state_code, subdomain, site_url')
+    .eq('active', true)
+    .order('name');
+
+  if (error) throw new Error(`Failed to list cities: ${error.message}`);
+  if (!data) return [];
+
+  // For each city, find the most recent published story. One round-trip per
+  // city is fine for a handful of cities; revisit when we have dozens.
+  const results = await Promise.all(
+    data.map(async (c) => {
+      const { data: latest } = await supabase
+        .from('stories')
+        .select('published_at')
+        .eq('city_id', c.id)
+        .eq('qc_status', 'approved')
+        .not('published_at', 'is', null)
+        .order('published_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return { ...c, latest_at: latest?.published_at || null };
+    })
+  );
+
+  return results.filter((c) => c.latest_at !== null);
+}
+
+/**
+ * Resolve the public URL for a given city. Priority:
+ *  1. `cities.site_url` if set (per-city manual override).
+ *  2. UMBRELLA_DOMAIN template if configured.
+ *  3. Fallback to the `{subdomain}-civic-newsletter-build.vercel.app`
+ *     convention used during the free-tier MVP phase.
+ */
+export function cityUrl(city: { subdomain: string; site_url?: string | null }): string {
+  if (city.site_url) return city.site_url;
+  if (UMBRELLA_DOMAIN) return `https://${city.subdomain}.${UMBRELLA_DOMAIN}`;
+  return `https://${city.subdomain}-civic-newsletter-build.vercel.app`;
 }

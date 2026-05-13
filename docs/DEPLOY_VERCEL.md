@@ -9,6 +9,8 @@ This guide covers the MVP single-tenant path (no domain purchase, no Pro plan). 
 
 Total time: ~10 minutes for the first city, ~5 minutes for each subsequent city.
 
+> **As of Phase C (2026-05-13):** the root `civic-newsletter-build.vercel.app` is now the **splash page**. It renders when the request resolves to no city — i.e. when `CITY_SUBDOMAIN` is unset on a project (and there's no `UMBRELLA_DOMAIN` match). Each city lives at its own Vercel project. See "Phase C: splash + Birmingham move" below for the cutover steps.
+
 ## One-time prerequisites
 
 - A Vercel account (free).
@@ -94,6 +96,58 @@ These are acceptable for MVP but should be scripted by Phase 4:
 - One `*.vercel.app` subdomain per project (we use one project per city).
 - Build minutes are not metered on Hobby plan.
 - No wildcard domain support — that's the only reason Pro would be needed at scale.
+
+## Phase C: splash + Birmingham move
+
+The cutover is two manual Vercel steps. The code already supports both modes
+from the same deploy:
+
+1. **Create the new Birmingham project.**
+   - Vercel → New Project → import the same `civic-newsletter` repo.
+   - Root Directory: `web`.
+   - Project name: `birmingham-al-civic-newsletter-build` (becomes
+     `birmingham-al-civic-newsletter-build.vercel.app`).
+   - Env vars (Production + Preview + Development):
+
+     | Name | Value |
+     |---|---|
+     | `CITY_SUBDOMAIN` | `birmingham-al` |
+     | `NEXT_PUBLIC_SUPABASE_URL` | `https://yfynwejgbyeisharldyk.supabase.co` |
+     | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | legacy anon JWT (see anon-key note above) |
+     | `REQUEST_HASH_SALT` | any 32+ char random string |
+
+   - Deploy. Verify `birmingham-al-civic-newsletter-build.vercel.app/` shows
+     the Birmingham home with the new card grid and source chips.
+
+2. **Convert the original project into the splash page.**
+   - Vercel → existing `civic-newsletter-build` project → Settings →
+     Environment Variables.
+   - **Remove** `CITY_SUBDOMAIN`.
+   - Keep `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+   - **Add** `REQUEST_HASH_SALT` (any 32+ char random string).
+   - Redeploy. With no `CITY_SUBDOMAIN` and no `UMBRELLA_DOMAIN` match,
+     `isSplashRequest()` returns true and the root URL renders `SplashHome`
+     instead of a city blog.
+
+3. **Update Birmingham's `site_url` in Supabase** so the splash page's
+   "Live cities" cards and the ad pipeline both point readers to the new
+   subdomain:
+
+   ```sql
+   update public.cities
+   set site_url = 'https://birmingham-al-civic-newsletter-build.vercel.app'
+   where subdomain = 'birmingham-al';
+   ```
+
+4. **Verify end-to-end.**
+   - `civic-newsletter-build.vercel.app/` → splash, search works, "Live
+     cities" shows Birmingham, submitting the request form returns
+     `{ ok: true }` and a row appears in `city_requests`.
+   - `birmingham-al-civic-newsletter-build.vercel.app/` → city home as before.
+   - `/api/search?q=bir` → returns Birmingham.
+
+Adding a city after Phase C: same as the per-city section above. Spin up a
+new Vercel project per city, set `CITY_SUBDOMAIN`, set `cities.site_url`.
 
 ## Multi-tenant config (future, once you own civicwire.com + Vercel Pro)
 

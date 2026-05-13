@@ -1,14 +1,62 @@
 import Link from 'next/link';
-import { getCity } from '@/lib/city';
+import { getCity, isSplashRequest, listActiveCitiesWithStories, cityUrl } from '@/lib/city';
 import { listStories, headline, formatDate } from '@/lib/stories';
 import { SourceChip } from '@/components/SourceBadge';
 import { ImpactPill } from '@/components/ImpactPill';
+import SplashHome from '@/components/SplashHome';
+import { supabase } from '@/lib/supabase';
 import type { StoryRow } from '@/lib/supabase';
 
 export const revalidate = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  if (isSplashRequest()) {
+    return <SplashView />;
+  }
+  return <CityHomeView />;
+}
+
+async function SplashView() {
+  const cities = await listActiveCitiesWithStories().catch(() => []);
+  const topRequested = await fetchTopRequested().catch(() => []);
+
+  // Resolve URLs server-side; pass as a plain map (functions aren't
+  // serializable across the server -> client boundary).
+  const cityUrls: Record<string, string> = {};
+  const cityCards = cities.map((c) => {
+    const url = cityUrl(c);
+    cityUrls[c.subdomain] = url;
+    return {
+      id: c.id,
+      name: c.name,
+      state: c.state,
+      state_code: c.state_code,
+      subdomain: c.subdomain,
+      latest_at: c.latest_at,
+      url,
+    };
+  });
+
+  return (
+    <SplashHome
+      cities={cityCards}
+      topRequested={topRequested}
+      cityUrls={cityUrls}
+    />
+  );
+}
+
+async function fetchTopRequested(): Promise<
+  Array<{ city_name: string; state: string; request_count: number }>
+> {
+  const { data, error } = await supabase.rpc('top_requested_cities', { top_n: 5 });
+  if (error || !data) return [];
+  // The RPC returns the typed columns we defined in the function.
+  return (data as Array<{ city_name: string; state: string; request_count: number }>) || [];
+}
+
+async function CityHomeView() {
   const city = await getCity();
   const stories = await listStories({ limit: 50 });
 

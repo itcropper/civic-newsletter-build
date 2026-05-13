@@ -308,3 +308,238 @@ body {
 }
 .post-detail h1 { font-family: var(--font-display); }
 .post-detail .post-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Splash page ---------- */
+.splash-header {
+  background-color: var(--color-primary);
+  background-image: linear-gradient(135deg, var(--color-primary) 0%, #2a4d7f 100%);
+}
+.splash-root { display: flex; flex-direction: column; gap: 48px; }
+
+.splash-hero {
+  text-align: center;
+  padding: 8px 0 0;
+}
+.splash-hero h1 {
+  font-family: var(--font-display);
+  font-size: 38px;
+  line-height: 1.18;
+  margin: 0 0 14px;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.splash-hero p {
+  font-family: var(--font-reading);
+  font-size: 18px;
+  color: var(--color-text-muted);
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.splash-search {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+.splash-search-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+.splash-search-shell { position: relative; }
+.splash-search-shell input[type="search"] {
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  background: var(--color-surface);
+  font-family: var(--font-reading);
+  font-size: 17px;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.splash-search-shell input[type="search"]:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.16);
+}
+.splash-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.18);
+  z-index: 10;
+}
+.splash-search-results li button {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  font-family: var(--font-reading);
+  font-size: 16px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.splash-search-results li button:hover { background: var(--color-muted-bg); }
+.splash-search-results li button strong { font-weight: 600; }
+.splash-search-results li button span {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+.splash-search-empty {
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: var(--color-muted-bg);
+  border-radius: 10px;
+  font-family: var(--font-reading);
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.splash-section { margin: 0 auto; max-width: 920px; width: 100%; }
+.splash-section-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  margin: 0 0 4px;
+  text-align: center;
+}
+.splash-section-sub {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 15px;
+  margin: 0 0 20px;
+}
+
+.splash-city-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.splash-city-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.splash-city-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -14px rgba(31, 58, 95, 0.3);
+}
+.splash-city-card h3 { font-family: var(--font-display); font-size: 22px; margin: 0; }
+.splash-city-card p {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+.splash-city-card-cta { font-family: var(--font-sans); font-size: 13px; color: var(--color-primary); margin-top: auto; }
+
+.splash-request {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 28px 24px 32px;
+}
+.splash-form {
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.splash-form-row { display: flex; gap: 12px; }
+.splash-form-row > input { flex: 1; }
+.splash-form input[type="text"],
+.splash-form input[type="email"] {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-family: var(--font-reading);
+  font-size: 16px;
+  outline: none;
+  background: #fff;
+}
+.splash-form input:focus { border-color: var(--color-primary); }
+.splash-form button {
+  padding: 12px 16px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.splash-form button:hover { background: #163459; }
+.splash-form button:disabled { background: #99a4b4; cursor: not-allowed; }
+.splash-form-msg { margin: 0; font-family: var(--font-sans); font-size: 14px; }
+.splash-form-msg.ok { color: #2d6b3a; }
+.splash-form-msg.err { color: var(--color-danger); }
+
+.splash-coming-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.splash-coming-list li {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+.splash-coming-rank {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 18px;
+}
+.splash-coming-name { font-family: var(--font-reading); }
+.splash-coming-count {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}

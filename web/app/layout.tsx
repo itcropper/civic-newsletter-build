@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { getCityOrFallback, formatCityFull, formatCityCompact } from '@/lib/city';
+import {
+  getCityOrFallback,
+  formatCityFull,
+  formatCityCompact,
+  isSplashRequest,
+} from '@/lib/city';
 import { getBaseUrl } from '@/lib/feeds';
 import './globals.css';
 
@@ -11,9 +16,19 @@ import './globals.css';
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const city = await getCityOrFallback();
   let metadataBase: URL | undefined;
   try { metadataBase = new URL(getBaseUrl()); } catch { /* leave undefined */ }
+
+  if (isSplashRequest()) {
+    return {
+      metadataBase,
+      title: { default: 'Civic Weekly', template: '%s \u2014 Civic Weekly' },
+      description:
+        'Plain-language coverage of public meetings, town by town. Find your city, or request the one we should cover next.',
+    };
+  }
+
+  const city = await getCityOrFallback();
   const compact = formatCityCompact(city);
   const fullName = formatCityFull(city);
   return {
@@ -31,6 +46,33 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
+  const splash = isSplashRequest();
+
+  if (splash) {
+    return (
+      <html lang="en">
+        <body>
+          <style>{`
+            :root {
+              --color-primary: #1f3a5f;
+              --color-secondary: #c9a55c;
+            }
+          `}</style>
+          <header className="site-header splash-header">
+            <div className="header-inner">
+              <a href="/" className="site-title">Civic Weekly</a>
+              <p className="site-tagline">Plain-language coverage of public meetings, town by town.</p>
+            </div>
+          </header>
+          <main className="site-main is-wide">{children}</main>
+          <footer className="site-footer">
+            <p>Civic Weekly. <a href="/about">About</a></p>
+          </footer>
+        </body>
+      </html>
+    );
+  }
+
   const city = await getCityOrFallback();
   const { primary, secondary, hero_url } = city.branding;
   const fullName = formatCityFull(city);
