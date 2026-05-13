@@ -1,15 +1,34 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Lazy init: don't crash on module import if env vars are missing.
+// Throw only on first actual use. Lets the build's static-rendering pass
+// skip pages that are marked force-dynamic without dragging in a hard
+// dependency on Supabase being reachable at build time.
 
-if (!url || !anon) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set');
+let _client: SupabaseClient | null = null;
+
+function getClient(): SupabaseClient {
+  if (_client) return _client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) {
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set. ' +
+        'Set them in your Vercel project Settings -> Environment Variables.'
+    );
+  }
+  _client = createClient(url, anon, { auth: { persistSession: false } });
+  return _client;
 }
 
-// Single client per process. RLS-readable rows only.
-export const supabase: SupabaseClient = createClient(url, anon, {
-  auth: { persistSession: false },
+// Proxy so consumers can still write `supabase.from('...')` etc.
+// Methods are resolved against the lazily-built client on first access.
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getClient() as unknown as Record<string | symbol, unknown>;
+    const value = client[prop];
+    return typeof value === 'function' ? (value as Function).bind(client) : value;
+  },
 });
 
 export type CityRow = {

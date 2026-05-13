@@ -1,10 +1,16 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { getCity } from '@/lib/city';
+import { getCity, getCityOrFallback } from '@/lib/city';
 import './globals.css';
 
+// Force all pages through this layout to be rendered dynamically.
+// Without this, Next.js tries to statically render /_not-found at build
+// time, which invokes the layout and forces a Supabase call before env
+// vars are necessarily resolvable.
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
-  const city = await getCity();
+  const city = await getCityOrFallback();
   return {
     title: { default: `${city.name} Civic`, template: `%s \u2014 ${city.name} Civic` },
     description: `Plain-language coverage of public meetings in ${city.name}. Updated regularly.`,
@@ -18,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const city = await getCity();
+  const city = await getCityOrFallback();
   const { primary, secondary, hero_url } = city.branding;
 
   return (

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getCity } from '@/lib/city';
 
 export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export default async function AboutPage() {
   const city = await getCity();

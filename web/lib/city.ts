@@ -40,6 +40,30 @@ async function readOverride(subdomain: string): Promise<Partial<BrandingPayload>
   return override;
 }
 
+/**
+ * Same as getCity but returns a placeholder when Supabase is unreachable or
+ * env vars are missing. Used by the layout so a build can still produce a
+ * shell even if data fetches fail. Pages still use getCity() and crash
+ * loudly so misconfiguration is visible.
+ */
+export async function getCityOrFallback(): Promise<CityRow & { branding: BrandingPayload }> {
+  try {
+    return await getCity();
+  } catch (err) {
+    const subdomain = CITY_SUBDOMAIN;
+    const name = subdomain.replace(/(^|-)([a-z])/g, (_, sep, ch) => (sep ? ' ' : '') + ch.toUpperCase());
+    const override = await readOverride(subdomain).catch(() => ({}));
+    return {
+      id: '00000000-0000-0000-0000-000000000000',
+      name,
+      subdomain,
+      timezone: 'America/Chicago',
+      branding_json: null,
+      branding: { ...DEFAULT_BRANDING, ...override },
+    } as CityRow & { branding: BrandingPayload };
+  }
+}
+
 /** Loads the city + final branding payload (override > db > default). */
 export async function getCity(): Promise<CityRow & { branding: BrandingPayload }> {
   const { data, error } = await supabase
