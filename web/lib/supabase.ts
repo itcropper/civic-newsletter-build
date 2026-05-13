@@ -37,6 +37,9 @@ export type CityRow = {
   subdomain: string;
   timezone: string | null;
   branding_json: BrandingPayload | null;
+  state: string | null;
+  state_code: string | null;
+  country: string | null;
 };
 
 export type BrandingPayload = {

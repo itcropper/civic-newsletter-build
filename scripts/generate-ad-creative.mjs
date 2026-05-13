@@ -111,10 +111,11 @@ async function main() {
   // changes (e.g. after cutting over from *.vercel.app to a real domain).
   const { data: city, error: cityErr } = await sb
     .from('cities')
-    .select('id, name, subdomain, branding_json, site_url')
+    .select('id, name, subdomain, branding_json, site_url, state, state_code, country')
     .eq('name', cityName)
     .single();
   if (cityErr || !city) throw new Error(`City not found: ${cityName}`);
+  const cityFullName = city.state ? `${city.name}, ${city.state}` : city.name;
   if (!city.site_url) {
     throw new Error(
       `City '${cityName}' has no site_url set. Run: UPDATE cities SET site_url='https://...' WHERE name='${cityName}';`
@@ -145,7 +146,7 @@ async function main() {
   const siteUrl = SITE_URL_TEMPLATE.replace('{subdomain}', city.subdomain);
 
   console.log(`\nGenerating ad copy variants...`);
-  const adCopyRaw = await callClaude(AD_COPY_SYSTEM, `City: ${city.name}\nCategory: ${story.category}\nImpact: ${story.impact_score}\nSummary: ${story.summary_text}`);
+  const adCopyRaw = await callClaude(AD_COPY_SYSTEM, `City: ${cityFullName}\nCategory: ${story.category}\nImpact: ${story.impact_score}\nSummary: ${story.summary_text}`);
   const variants = parseJSON(adCopyRaw).map((v) => ({
     ...v,
     headline: (v.headline || '').substring(0, 40),
@@ -154,7 +155,7 @@ async function main() {
   console.log(`  Got ${variants.length} variants`);
 
   console.log(`\nGenerating targeting brief...`);
-  const targetingRaw = await callClaude(TARGETING_SYSTEM, `City: ${city.name}\nStory: ${story.summary_text.substring(0, 400)}`);
+  const targetingRaw = await callClaude(TARGETING_SYSTEM, `City: ${city.name}\nState: ${city.state || 'unknown'}\nCountry: ${city.country || 'US'}\nStory: ${story.summary_text.substring(0, 400)}`);
   const targeting = parseJSON(targetingRaw);
   console.log(`  Geo: ${targeting.geo?.city}, ${targeting.geo?.state} (radius ${targeting.geo?.radius_miles}mi)`);
 

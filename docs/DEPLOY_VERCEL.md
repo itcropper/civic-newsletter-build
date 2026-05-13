@@ -31,12 +31,12 @@ Or use the GitHub website to add a new remote and push.
 2. Pick the `civic-newsletter` repo.
 3. **Root Directory** — set to `web` (not the repo root). This tells Vercel to build the Next.js app, not the pipeline code.
 4. Framework Preset auto-detects Next.js.
-5. Project name: `birmingham-civic` (becomes `birmingham-civic.vercel.app`).
+5. Project name: `birmingham-al-civic` (becomes `birmingham-al-civic.vercel.app`).
 6. Add environment variables (Settings → Environment Variables — set for Production, Preview, and Development):
 
    | Name | Value |
    |---|---|
-   | `CITY_SUBDOMAIN` | `birmingham` |
+   | `CITY_SUBDOMAIN` | `birmingham-al` |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://yfynwejgbyeisharldyk.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (paste the legacy JWT anon key — see note below) |
 
@@ -50,7 +50,7 @@ Or use the GitHub website to add a new remote and push.
 
 Once the deploy completes:
 
-- Open `https://birmingham-civic.vercel.app/` — should show the latest Birmingham approved stories in reverse chronological order.
+- Open `https://birmingham-al-civic.vercel.app/` — should show the latest Birmingham approved stories in reverse chronological order.
 - Open `/posts/<slug>` — individual story page.
 - Open `/rss.xml` — RSS feed with the latest 25 stories.
 - Open `/atom.xml` — Atom feed.

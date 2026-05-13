@@ -25,7 +25,7 @@ Once `payload.json` exists for a city + date:
 
 1. Open Facebook Ads Manager → Create Campaign.
 2. Objective: **Traffic** (link clicks to website).
-3. Campaign name: paste `campaign_id` from `payload.json` (e.g., `birmingham_the-committee-will-consider-an_2026-05-12`).
+3. Campaign name: paste `campaign_id` from `payload.json` (e.g., `birmingham-al_the-committee-will-consider-an_2026-05-12`).
 4. Ad set:
    - Audience: paste the values from `audience` in the payload (geo city + radius, age, interests, behaviors).
    - Budget: paste `budget.daily_usd` and `budget.duration_days`.
@@ -45,10 +45,10 @@ Once `payload.json` exists for a city + date:
 
 ## Tracking what's working
 
-UTM tags are on every link in the payload. After ads run, check `birmingham-civic.vercel.app` analytics (Vercel Analytics or Plausible if added) and filter by:
+UTM tags are on every link in the payload. After ads run, check `birmingham-al-civic.vercel.app` analytics (Vercel Analytics or Plausible if added) and filter by:
 
 - `utm_source=facebook` vs `utm_source=nextdoor` — which platform drove more traffic
-- `utm_campaign=birmingham_*` — which story drew the most clicks
+- `utm_campaign=birmingham-al_*` — which story drew the most clicks
 
 Report after 5 days. If one platform is clearly outperforming, shift budget. If one creative angle (`civic_fact` vs `resident_impact` vs `curiosity`) is winning, generate the next campaign with that angle weighted higher.
 

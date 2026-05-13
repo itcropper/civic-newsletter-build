@@ -14,7 +14,7 @@ The Next.js blog app lives in `web/`. It renders one city per deployment via the
 
 City branding has two paths. The auto path (`scripts/bootstrap-branding.mjs`) pulls a city's Wikipedia thumbnail and stores a derived palette in `cities.branding_json`. The override path (`web/branding/{subdomain}/`) lets you drop a `hero.jpg` and `colors.json` to override the auto result. Birmingham already has an override colors.json checked in (navy + gold).
 
-Ad creative generation works end-to-end. `scripts/generate-ad-creative.mjs` picks a city's top approved story, generates 3 creative variants and an audience brief via Claude, wraps every link with UTM tags per platform, writes a machine-readable `payload.json` and a human-reviewable `preview.md`. An example for today's top Birmingham story (the Graymont School $790K covenant) is at `output/ads/birmingham/2026-05-12/`.
+Ad creative generation works end-to-end. `scripts/generate-ad-creative.mjs` picks a city's top approved story, generates 3 creative variants and an audience brief via Claude, wraps every link with UTM tags per platform, writes a machine-readable `payload.json` and a human-reviewable `preview.md`. An example for today's top Birmingham story (the Graymont School $790K covenant) is at `output/ads/birmingham-al/2026-05-12/`.
 
 ### Blocked on you
 
@@ -45,10 +45,10 @@ Today's crawl found 4 new Birmingham meetings (council, public safety committee,
 ## How to launch the first city, end to end
 
 1. Push the repo to GitHub.
-2. Follow `docs/DEPLOY_VERCEL.md` to create the `birmingham-civic` Vercel project. ~10 min.
-3. Open `https://birmingham-civic.vercel.app/` — verify stories render, RSS works, branding looks right.
-4. Run `node --env-file=.env scripts/generate-ad-creative.mjs --city Birmingham` to refresh the ad payload with the latest top story. (Or use the existing example at `output/ads/birmingham/2026-05-12/`.)
-5. Review `output/ads/birmingham/{date}/preview.md`.
+2. Follow `docs/DEPLOY_VERCEL.md` to create the `birmingham-al-civic` Vercel project. ~10 min.
+3. Open `https://birmingham-al-civic.vercel.app/` — verify stories render, RSS works, branding looks right.
+4. Run `node --env-file=.env scripts/generate-ad-creative.mjs --city Birmingham` to refresh the ad payload with the latest top story. (Or use the existing example at `output/ads/birmingham-al/2026-05-12/`.)
+5. Review `output/ads/birmingham-al/{date}/preview.md`.
 6. Once Facebook identity verification clears, follow `docs/AD_SUBMISSION.md` to launch the campaign.
 
 Total time from "today" to "ads running": as soon as Facebook verifies, ~30 minutes of hands-on work.
@@ -61,7 +61,7 @@ Total time from "today" to "ads running": as soon as Facebook verifies, ~30 minu
 - `web/` — entire Next.js app (package.json, configs, lib/, app/, branding/)
 - `scripts/bootstrap-branding.mjs` (Wikipedia → palette → DB)
 - `scripts/generate-ad-creative.mjs` (top story → variants + targeting + UTMs)
-- `output/ads/birmingham/2026-05-12/payload.json` + `preview.md` (example output)
+- `output/ads/birmingham-al/2026-05-12/payload.json` + `preview.md` (example output)
 - `docs/DEPLOY_VERCEL.md`
 - `docs/AD_SUBMISSION.md`
 - `docs/MVP_STATUS.md` (this file)

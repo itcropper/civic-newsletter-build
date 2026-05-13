@@ -41,8 +41,8 @@ CTA: See details
 
 ## Per-platform destinations
 
-- **facebook**: https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=facebook&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12
-- **nextdoor**: https://birmingham-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=nextdoor&utm_medium=cpc&utm_campaign=birmingham_the-committee-will-consider-an_2026-05-12
+- **facebook**: https://birmingham-al-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=facebook&utm_medium=cpc&utm_campaign=birmingham-al_the-committee-will-consider-an_2026-05-12
+- **nextdoor**: https://birmingham-al-civic.vercel.app/posts/the-committee-will-consider-an-agreement-with-jefferson-county-to-release-a-rest-fc0f18?utm_source=nextdoor&utm_medium=cpc&utm_campaign=birmingham-al_the-committee-will-consider-an_2026-05-12
 
 ## Suggested budget
 
@@ -54,7 +54,7 @@ Before submitting these to Facebook or Nextdoor, confirm:
 
 - [ ] All three variant headlines and bodies are factually accurate to the source story.
 - [ ] No partisan framing, no emotional escalation, no clickbait.
-- [ ] Destination URLs resolve to a real story page on `birmingham-civic.vercel.app`.
+- [ ] Destination URLs resolve to a real story page on `birmingham-al-civic.vercel.app`.
 - [ ] Budget matches what you intended to spend.
 - [ ] Geo, age, and interests look reasonable for Birmingham.
 

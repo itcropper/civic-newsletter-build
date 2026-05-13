@@ -97,9 +97,22 @@ export async function getCityOrFallback(): Promise<CityRow & { branding: Brandin
       subdomain,
       timezone: 'America/Chicago',
       branding_json: null,
+      state: null,
+      state_code: null,
+      country: null,
       branding: { ...DEFAULT_BRANDING, ...override },
     } as CityRow & { branding: BrandingPayload };
   }
+}
+
+/** "Birmingham, Alabama" when state is set; just the name otherwise. */
+export function formatCityFull(city: Pick<CityRow, 'name' | 'state'>): string {
+  return city.state ? `${city.name}, ${city.state}` : city.name;
+}
+
+/** "Birmingham, AL" — compact version for SEO/metadata. */
+export function formatCityCompact(city: Pick<CityRow, 'name' | 'state_code'>): string {
+  return city.state_code ? `${city.name}, ${city.state_code}` : city.name;
 }
 
 /** Loads the city for the current request + final branding payload (override > db > default). */
@@ -108,7 +121,7 @@ export async function getCity(): Promise<CityRow & { branding: BrandingPayload }
 
   const { data, error } = await supabase
     .from('cities')
-    .select('id, name, subdomain, timezone, branding_json')
+    .select('id, name, subdomain, timezone, branding_json, state, state_code, country')
     .eq('subdomain', subdomain)
     .eq('active', true)
     .maybeSingle();
