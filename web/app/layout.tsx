@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <p className="site-tagline">Plain-language coverage of public meetings in {fullName}.</p>
           </div>
         </header>
-        <main className="site-main">{children}</main>
+        <main className="site-main is-wide">{children}</main>
         <footer className="site-footer">
           <p>
             {fullName} Civic. Updated continuously. <a href="/rss.xml">RSS</a> &middot; <a href="/about">About</a>

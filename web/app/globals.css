@@ -6,7 +6,14 @@
   --color-border: #e4e2db;
   --color-primary: #1f3a5f;
   --color-secondary: #c9a55c;
+  --color-danger: #b53737;
+  --color-warning: #c18d2c;
+  --color-muted-bg: #f1efe8;
   --max-width: 720px;
+  --grid-max-width: 1080px;
+  --font-display: 'Source Serif Pro', 'Source Serif 4', Georgia, 'Times New Roman', Times, serif;
+  --font-reading: Georgia, 'Times New Roman', Times, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -114,3 +121,190 @@ body {
   color: var(--color-text-muted);
 }
 .context-note strong { color: var(--color-text); font-style: normal; }
+
+/* ---------- Source badge (compact chip + prominent band) ---------- */
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  text-transform: lowercase;
+  letter-spacing: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  background: var(--color-surface);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.source-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.source-chip .source-chip-icon { font-size: 11px; opacity: 0.7; }
+
+.source-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  background: var(--color-muted-bg);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.source-band-text { display: flex; flex-direction: column; gap: 2px; }
+.source-band-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; }
+.source-band-name { color: var(--color-text); }
+.source-band-link {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.source-band-link:hover { text-decoration: underline; }
+
+/* ---------- Impact pill (High / Medium / Low) ---------- */
+.impact-pill {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  line-height: 1.6;
+}
+.impact-pill-high { background: var(--color-primary); color: #fff; }
+.impact-pill-medium { background: transparent; color: var(--color-primary); border-color: var(--color-primary); }
+.impact-pill-low { background: transparent; color: var(--color-text-muted); border-color: var(--color-border); }
+
+/* ---------- Card grid ---------- */
+.site-main.is-wide { max-width: var(--grid-max-width); }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+@media (min-width: 760px) {
+  .card-grid { grid-template-columns: repeat(2, 1fr); }
+  .card-grid .card-lead { grid-column: 1 / -1; }
+}
+
+.story-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.story-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 6px 20px -10px rgba(31, 58, 95, 0.25);
+  transform: translateY(-1px);
+}
+.story-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.story-card-meta time { color: inherit; }
+.story-card-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.22;
+  margin: 0;
+}
+.card-lead .story-card-title { font-size: 30px; line-height: 1.15; }
+.story-card-title a { color: var(--color-text); text-decoration: none; }
+.story-card-title a:hover { color: var(--color-primary); }
+.story-card-excerpt { color: var(--color-text-muted); margin: 0; font-size: 16px; line-height: 1.55; }
+.story-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 6px;
+  flex-wrap: wrap;
+}
+.story-card-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+.tag-chip {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  padding: 1px 9px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.tag-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ---------- Empty state + skeleton ---------- */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+}
+.empty-state-emoji { font-size: 36px; display: block; margin-bottom: 12px; }
+.empty-state-title { font-family: var(--font-display); font-size: 22px; color: var(--color-text); margin: 0 0 8px; }
+.empty-state-body { margin: 0; font-size: 16px; }
+
+.skeleton-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.skeleton-line {
+  height: 12px;
+  background: linear-gradient(90deg, var(--color-muted-bg) 0%, #e7e5dd 50%, var(--color-muted-bg) 100%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-line.short { width: 35%; }
+.skeleton-line.medium { width: 70%; }
+.skeleton-line.long { width: 100%; }
+.skeleton-line.title { height: 22px; width: 88%; }
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---------- Story detail tweaks ---------- */
+.post-detail {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.post-detail h1 { font-family: var(--font-display); }
+.post-detail .post-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

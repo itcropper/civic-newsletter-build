@@ -3,6 +3,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getCity } from '@/lib/city';
 import { getStoryBySlug, headline, formatDate } from '@/lib/stories';
+import { SourceBand } from '@/components/SourceBadge';
+import { ImpactPill } from '@/components/ImpactPill';
 
 export const revalidate = 300;
 export const dynamic = 'force-dynamic';
@@ -28,9 +30,10 @@ export default async function PostPage({ params }: { params: { slug: string } })
   return (
     <article className="post-detail">
       <Link href="/" className="back-link">{'\u2190'} All stories</Link>
+      <SourceBand url={story.source_url} name={story.source_name} />
       <div className="post-meta">
         <time dateTime={story.published_at}>{formatDate(story.published_at, city.timezone)}</time>
-        {story.impact_score ? <> &middot; Impact: {story.impact_score}</> : null}
+        <ImpactPill impact={story.impact_score} />
       </div>
       <h1>{headline(story, 140)}</h1>
       <div className="post-body">

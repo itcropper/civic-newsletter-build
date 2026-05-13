@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { getCity } from '@/lib/city';
 import { listStories, headline, formatDate } from '@/lib/stories';
+import { SourceChip } from '@/components/SourceBadge';
+import { ImpactPill } from '@/components/ImpactPill';
+import type { StoryRow } from '@/lib/supabase';
 
 export const revalidate = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
@@ -11,26 +14,73 @@ export default async function HomePage() {
 
   if (stories.length === 0) {
     return (
-      <div>
-        <p className="post-excerpt">No published stories yet for {city.name}. Check back soon.</p>
+      <div className="empty-state">
+        <span className="empty-state-emoji" aria-hidden>{'\u{1F4F0}'}</span>
+        <h2 className="empty-state-title">It&rsquo;s quiet in {city.name} this week.</h2>
+        <p className="empty-state-body">
+          No new public-meeting coverage yet. Check back soon &mdash; we&rsquo;ll let you know when something changes.
+        </p>
       </div>
     );
   }
 
+  const lead = pickLead(stories);
+  const rest = stories.filter((s) => s.id !== lead.id);
+
   return (
-    <ol className="post-list">
-      {stories.map((s) => (
-        <li key={s.id}>
-          <div className="post-meta">
-            <time dateTime={s.published_at}>{formatDate(s.published_at, city.timezone)}</time>
-            {s.tags && s.tags[0] ? <> &middot; <Link href={`/tags/${encodeURIComponent(s.tags[0].toLowerCase())}`}>{s.tags[0]}</Link></> : null}
-          </div>
-          <h2 className="post-title">
-            <Link href={`/posts/${s.slug}`} className="post-link">{headline(s)}</Link>
-          </h2>
-          <p className="post-excerpt">{s.summary_text.slice(0, 220)}{s.summary_text.length > 220 ? '\u2026' : ''}</p>
-        </li>
+    <div className="card-grid">
+      <StoryCard story={lead} cityTimezone={city.timezone} variant="lead" />
+      {rest.map((s) => (
+        <StoryCard key={s.id} story={s} cityTimezone={city.timezone} />
       ))}
-    </ol>
+    </div>
+  );
+}
+
+/** Pick the first High-impact story as the lead, falling back to the newest. */
+function pickLead(stories: StoryRow[]): StoryRow {
+  const high = stories.find((s) => (s.impact_score || '').toLowerCase() === 'high');
+  return high || stories[0];
+}
+
+function StoryCard({
+  story,
+  cityTimezone,
+  variant,
+}: {
+  story: StoryRow;
+  cityTimezone: string | null;
+  variant?: 'lead';
+}) {
+  const excerptLength = variant === 'lead' ? 280 : 180;
+  const excerpt =
+    (story.summary_text || '').slice(0, excerptLength) +
+    ((story.summary_text || '').length > excerptLength ? '\u2026' : '');
+
+  return (
+    <article className={`story-card${variant === 'lead' ? ' card-lead' : ''}`}>
+      <div className="story-card-meta">
+        <time dateTime={story.published_at}>{formatDate(story.published_at, cityTimezone)}</time>
+        <ImpactPill impact={story.impact_score} />
+      </div>
+      <h2 className="story-card-title">
+        <Link href={`/posts/${story.slug}`}>{headline(story)}</Link>
+      </h2>
+      <p className="story-card-excerpt">{excerpt}</p>
+      <div className="story-card-footer">
+        <div className="story-card-tag-row">
+          {(story.tags || []).slice(0, 3).map((t) => (
+            <Link
+              key={t}
+              href={`/tags/${encodeURIComponent(t.toLowerCase())}`}
+              className="tag-chip"
+            >
+              {t}
+            </Link>
+          ))}
+        </div>
+        <SourceChip url={story.source_url} name={story.source_name} />
+      </div>
+    </article>
   );
 }
