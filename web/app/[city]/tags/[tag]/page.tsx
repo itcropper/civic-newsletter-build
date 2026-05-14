@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getCity } from '@/lib/city';
+import { notFound } from 'next/navigation';
+import { tryGetCity } from '@/lib/city';
 import { listStories, headline, formatDate } from '@/lib/stories';
 import { SourceChip } from '@/components/SourceBadge';
 import { ImpactPill } from '@/components/ImpactPill';
@@ -8,22 +9,30 @@ import { ImpactPill } from '@/components/ImpactPill';
 export const revalidate = 300;
 export const dynamic = 'force-dynamic';
 
-export async function generateMetadata({ params }: { params: { tag: string } }): Promise<Metadata> {
-  return { title: `${params.tag} stories` };
+type Params = { city: string; tag: string };
+
+export async function generateMetadata(
+  { params }: { params: Params }
+): Promise<Metadata> {
+  return { title: `${decodeURIComponent(params.tag)} stories` };
 }
 
-export default async function TagPage({ params }: { params: { tag: string } }) {
-  const stories = await listStories({});
-  const city = await getCity();
+export default async function TagPage({ params }: { params: Params }) {
+  const city = await tryGetCity(params.city);
+  if (!city) notFound();
+
+  const stories = await listStories(city.id);
+  const slug = encodeURIComponent(city.subdomain);
+  const tagParam = decodeURIComponent(params.tag);
   const matching = stories.filter((s) =>
-    (s.tags || []).some((t) => t.toLowerCase() === params.tag.toLowerCase())
+    (s.tags || []).some((t) => t.toLowerCase() === tagParam.toLowerCase())
   );
   const display =
-    matching[0]?.tags?.find((t) => t.toLowerCase() === params.tag.toLowerCase()) || params.tag;
+    matching[0]?.tags?.find((t) => t.toLowerCase() === tagParam.toLowerCase()) || tagParam;
 
   return (
     <div>
-      <Link href="/" className="back-link">{'\u2190'} All stories</Link>
+      <Link href={`/${slug}`} className="back-link">{'\u2190'} All stories</Link>
       <h1 style={{ marginTop: 12, fontFamily: 'var(--font-display)' }}>Tag: {display}</h1>
       {matching.length === 0 ? (
         <div className="empty-state">
@@ -44,7 +53,7 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
                   <ImpactPill impact={s.impact_score} />
                 </div>
                 <h2 className="story-card-title">
-                  <Link href={`/posts/${s.slug}`}>{headline(s)}</Link>
+                  <Link href={`/${slug}/posts/${s.slug}`}>{headline(s)}</Link>
                 </h2>
                 <p className="story-card-excerpt">{excerpt}</p>
                 <div className="story-card-footer">
@@ -52,7 +61,7 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
                     {(s.tags || []).slice(0, 3).map((t) => (
                       <Link
                         key={t}
-                        href={`/tags/${encodeURIComponent(t.toLowerCase())}`}
+                        href={`/${slug}/tags/${encodeURIComponent(t.toLowerCase())}`}
                         className="tag-chip"
                       >
                         {t}

@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Routing is request-time and data-driven: the Host header maps to a
-  // cities row via lib/city.ts. No build-time city baked into the bundle.
+  // Routing is path-based: `/` is the splash, `/{cities.subdomain}` is each
+  // city. The slug comes from `params.city` in the route segment; no Host
+  // header parsing, no build-time city baked into the bundle.
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'upload.wikimedia.org' },

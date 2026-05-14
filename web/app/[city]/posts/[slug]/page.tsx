@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getCity } from '@/lib/city';
+import { tryGetCity } from '@/lib/city';
 import { getStoryBySlug, headline, formatDate } from '@/lib/stories';
 import { SourceBand } from '@/components/SourceBadge';
 import { ImpactPill } from '@/components/ImpactPill';
@@ -9,8 +9,14 @@ import { ImpactPill } from '@/components/ImpactPill';
 export const revalidate = 300;
 export const dynamic = 'force-dynamic';
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const story = await getStoryBySlug(params.slug);
+type Params = { city: string; slug: string };
+
+export async function generateMetadata(
+  { params }: { params: Params }
+): Promise<Metadata> {
+  const city = await tryGetCity(params.city);
+  if (!city) return {};
+  const story = await getStoryBySlug(city.id, params.slug);
   if (!story) return {};
   return {
     title: headline(story, 70),
@@ -20,16 +26,19 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 type Vote = { motion?: string; result?: string; vote_count?: string };
 
-export default async function PostPage({ params }: { params: { slug: string } }) {
-  const story = await getStoryBySlug(params.slug);
+export default async function PostPage({ params }: { params: Params }) {
+  const city = await tryGetCity(params.city);
+  if (!city) notFound();
+
+  const story = await getStoryBySlug(city.id, params.slug);
   if (!story) notFound();
 
-  const city = await getCity();
+  const slug = encodeURIComponent(city.subdomain);
   const votes: Vote[] = Array.isArray(story.votes_json) ? (story.votes_json as Vote[]) : [];
 
   return (
     <article className="post-detail">
-      <Link href="/" className="back-link">{'\u2190'} All stories</Link>
+      <Link href={`/${slug}`} className="back-link">{'\u2190'} All stories</Link>
       <SourceBand url={story.source_url} name={story.source_name} />
       <div className="post-meta">
         <time dateTime={story.published_at}>{formatDate(story.published_at, city.timezone)}</time>
@@ -63,7 +72,13 @@ export default async function PostPage({ params }: { params: { slug: string } })
       {story.tags && story.tags.length > 0 ? (
         <div className="tag-list">
           {story.tags.map((t) => (
-            <Link key={t} href={`/tags/${encodeURIComponent(t.toLowerCase())}`} className="tag">{t}</Link>
+            <Link
+              key={t}
+              href={`/${slug}/tags/${encodeURIComponent(t.toLowerCase())}`}
+              className="tag"
+            >
+              {t}
+            </Link>
           ))}
         </div>
       ) : null}

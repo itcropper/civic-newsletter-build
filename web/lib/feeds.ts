@@ -26,10 +26,11 @@ function xmlEscape(s: string): string {
 
 export function renderRss(city: CityRow & { branding: BrandingPayload }, stories: StoryRow[]): string {
   const base = getBaseUrl();
+  const cityBase = `${base}/${encodeURIComponent(city.subdomain)}`;
   const lastPub = stories[0]?.published_at || new Date().toISOString();
   const items = stories
     .map((s) => {
-      const url = `${base}/posts/${encodeURIComponent(s.slug)}`;
+      const url = `${cityBase}/posts/${encodeURIComponent(s.slug)}`;
       const title = xmlEscape(headline(s, 140));
       const body = xmlEscape(s.summary_text);
       const cats = (s.tags || []).map((t) => `<category>${xmlEscape(t)}</category>`).join('');
@@ -48,8 +49,8 @@ export function renderRss(city: CityRow & { branding: BrandingPayload }, stories
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${xmlEscape(city.name + ' Civic')}</title>
-    <link>${base}</link>
-    <atom:link href="${base}/rss.xml" rel="self" type="application/rss+xml" />
+    <link>${cityBase}</link>
+    <atom:link href="${cityBase}/rss.xml" rel="self" type="application/rss+xml" />
     <description>Plain-language coverage of public meetings in ${xmlEscape(city.name)}.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date(lastPub).toUTCString()}</lastBuildDate>
@@ -60,10 +61,11 @@ ${items}
 
 export function renderAtom(city: CityRow & { branding: BrandingPayload }, stories: StoryRow[]): string {
   const base = getBaseUrl();
+  const cityBase = `${base}/${encodeURIComponent(city.subdomain)}`;
   const updated = stories[0]?.published_at || new Date().toISOString();
   const entries = stories
     .map((s) => {
-      const url = `${base}/posts/${encodeURIComponent(s.slug)}`;
+      const url = `${cityBase}/posts/${encodeURIComponent(s.slug)}`;
       return `  <entry>
     <title>${xmlEscape(headline(s, 140))}</title>
     <id>${url}</id>
@@ -77,9 +79,9 @@ export function renderAtom(city: CityRow & { branding: BrandingPayload }, storie
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>${xmlEscape(city.name + ' Civic')}</title>
-  <id>${base}/</id>
-  <link href="${base}/"/>
-  <link rel="self" href="${base}/atom.xml"/>
+  <id>${cityBase}/</id>
+  <link href="${cityBase}/"/>
+  <link rel="self" href="${cityBase}/atom.xml"/>
   <updated>${new Date(updated).toISOString()}</updated>
   <subtitle>Plain-language coverage of public meetings in ${xmlEscape(city.name)}.</subtitle>
 ${entries}

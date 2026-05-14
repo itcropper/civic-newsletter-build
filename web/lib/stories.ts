@@ -1,5 +1,4 @@
 import { supabase, type StoryRow } from './supabase';
-import { getCity } from './city';
 
 const STORY_SELECT =
   'id, city_id, slug, headline, summary_text, category, impact_score, ' +
@@ -10,13 +9,15 @@ type RawStoryRow = Omit<StoryRow, 'source_url' | 'source_name'> & {
   meetings?: { source_url: string | null; url: string | null } | null;
 };
 
-/** Latest approved stories, most recent first. */
-export async function listStories(opts: { limit?: number; tag?: string } = {}): Promise<StoryRow[]> {
-  const city = await getCity();
+/** Latest approved stories for `cityId`, most recent first. */
+export async function listStories(
+  cityId: string,
+  opts: { limit?: number; tag?: string } = {}
+): Promise<StoryRow[]> {
   let q = supabase
     .from('stories')
     .select(STORY_SELECT)
-    .eq('city_id', city.id)
+    .eq('city_id', cityId)
     .eq('qc_status', 'approved')
     .not('published_at', 'is', null)
     .not('slug', 'is', null)
@@ -30,12 +31,11 @@ export async function listStories(opts: { limit?: number; tag?: string } = {}): 
   return ((data as unknown as RawStoryRow[]) || []).map(flattenStory);
 }
 
-export async function getStoryBySlug(slug: string): Promise<StoryRow | null> {
-  const city = await getCity();
+export async function getStoryBySlug(cityId: string, slug: string): Promise<StoryRow | null> {
   const { data, error } = await supabase
     .from('stories')
     .select(STORY_SELECT)
-    .eq('city_id', city.id)
+    .eq('city_id', cityId)
     .eq('slug', slug)
     .eq('qc_status', 'approved')
     .maybeSingle();
@@ -75,8 +75,8 @@ export function sourceNameFromUrl(url: string | null | undefined): string | null
   }
 }
 
-export async function listAllTags(): Promise<{ tag: string; count: number }[]> {
-  const stories = await listStories({});
+export async function listAllTags(cityId: string): Promise<{ tag: string; count: number }[]> {
+  const stories = await listStories(cityId);
   const counts = new Map<string, number>();
   for (const s of stories) {
     for (const t of s.tags || []) counts.set(t, (counts.get(t) || 0) + 1);

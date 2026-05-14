@@ -1,15 +1,18 @@
-# Deploying a city blog to Vercel
+# Deploying Civic Weekly to Vercel
 
-City resolution is data-driven. The code asks the `cities` table which city a request belongs to, using the request's `Host` header. Two deployment modes use the same code:
+Routing is **path-based** as of 2026-05-14. One Vercel project serves the
+splash page **and** every city. Each city lives at `/{cities.subdomain}` on
+the same host — e.g. `civic-newsletter-build.vercel.app/birmingham-al` and
+`civic-newsletter-build.vercel.app/medford-or`. No subdomain DNS, no Vercel
+Pro plan required, no per-city Vercel project.
 
-- **Multi-tenant (production):** one Vercel project serves every city. `birmingham.civicwire.com`, `savannah.civicwire.com`, etc. all hit the same deployment and resolve their city from the Host header against the database. Requires a custom domain with wildcard DNS and Vercel Pro.
-- **Single-tenant (MVP / free-tier):** one Vercel project per city, each at its own `*.vercel.app` URL. The Host header doesn't expose a usable subdomain on free tier, so the `CITY_SUBDOMAIN` env var fills that role for one city at a time. The cities table is still the source of truth — the env var just names which row this deployment renders.
+> Migrated from subdomain routing (each city had its own Vercel project +
+> `CITY_SUBDOMAIN` env var) because subdomain routing on free-tier Vercel
+> kept breaking the request-time city resolution. Path routing makes the
+> slug part of the URL, so there's nothing left to misconfigure.
 
-This guide covers the MVP single-tenant path (no domain purchase, no Pro plan). The multi-tenant config is at the bottom.
-
-Total time: ~10 minutes for the first city, ~5 minutes for each subsequent city.
-
-> **As of Phase C (2026-05-13):** the root `civic-newsletter-build.vercel.app` is now the **splash page**. It renders when the request resolves to no city — i.e. when `CITY_SUBDOMAIN` is unset on a project (and there's no `UMBRELLA_DOMAIN` match). Each city lives at its own Vercel project. See "Phase C: splash + Birmingham move" below for the cutover steps.
+Total time: ~5 minutes for the initial project. Adding a new city after
+that is a single SQL `INSERT` into `cities` — no Vercel changes.
 
 ## One-time prerequisites
 
@@ -31,23 +34,38 @@ Or use the GitHub website to add a new remote and push.
 
 1. Go to https://vercel.com/new
 2. Pick the `civic-newsletter` repo.
-3. **Root Directory** — set to `web` (not the repo root). This tells Vercel to build the Next.js app, not the pipeline code.
+3. **Root Directory** — set to `web` (not the repo root). This tells Vercel
+   to build the Next.js app, not the pipeline code.
 4. Framework Preset auto-detects Next.js.
-5. Project name: `birmingham-al-civic` (becomes `birmingham-al-civic.vercel.app`).
-6. Add environment variables (Settings → Environment Variables — set for Production, Preview, and Development):
+5. Project name: `civic-newsletter-build` (becomes
+   `civic-newsletter-build.vercel.app`).
+6. Add environment variables (Settings → Environment Variables — set for
+   Production, Preview, and Development):
 
    | Name | Value |
    |---|---|
-   | `CITY_SUBDOMAIN` | `birmingham-al` |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://yfynwejgbyeisharldyk.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (paste the legacy JWT anon key — see note below) |
-   | `REQUEST_HASH_SALT` | any 32+ char random string (used to hash IPs for rate-limiting) |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | legacy anon JWT (see note below) |
+   | `REQUEST_HASH_SALT` | any 32+ char random string (used to hash IPs for rate-limiting on the splash request form) |
 
-   The site URL is derived from the request `Host` header at runtime, so there's no `NEXT_PUBLIC_SITE_URL` to set. RSS/Atom feeds, canonical tags, and OG metadata all build their absolute URLs from whatever hostname the visitor used to reach the site.
+   **Do NOT set `CITY_SUBDOMAIN`** on this project. If it's set, the legacy
+   middleware will 308-redirect `/` to `/{CITY_SUBDOMAIN}`, which hides the
+   splash. The env var only exists for transitional compatibility with old
+   per-city projects; remove it everywhere it's set.
 
-   **No newsletter env vars yet.** Beehiiv-related env vars (`BEEHIIV_API_KEY`, `BEEHIIV_PUBLICATION_ID`) are NOT required for this phase — there is no on-blog subscribe form in the current build. The "tell me when my city is added" flow lives on the splash page and writes to `public.city_requests` directly. When we re-introduce per-city newsletter signup, we'll add the env vars back here.
+   **No newsletter env vars yet.** Beehiiv-related env vars
+   (`BEEHIIV_API_KEY`, `BEEHIIV_PUBLICATION_ID`) are NOT required — there
+   is no on-blog subscribe form in the current build. The "tell me when my
+   city is added" flow lives on the splash page and writes to
+   `public.city_requests` directly. When per-city newsletter signup is
+   reintroduced, the env vars will be added back here.
 
-   **Anon key note** — Use the **legacy** anon key (starts with `eyJ`), not the new `sb_publishable_...` format. Find it in Supabase Dashboard → Project Settings → API → "Legacy API keys" (or via the `get_publishable_keys` MCP call). Anon keys are designed to be public-facing — they identify the project, and Row Level Security on the database is what actually gates access.
+   **Anon key note** — Use the **legacy** anon key (starts with `eyJ`), not
+   the new `sb_publishable_...` format. Find it in Supabase Dashboard →
+   Project Settings → API → "Legacy API keys" (or via the
+   `get_publishable_keys` MCP call). Anon keys are designed to be
+   public-facing — they identify the project, and Row Level Security on the
+   database is what actually gates access.
 
 7. Click **Deploy**. First build takes 1-2 minutes.
 
@@ -55,114 +73,104 @@ Or use the GitHub website to add a new remote and push.
 
 Once the deploy completes:
 
-- Open `https://birmingham-al-civic.vercel.app/` — should show the latest Birmingham approved stories in reverse chronological order.
-- Open `/posts/<slug>` — individual story page.
-- Open `/rss.xml` — RSS feed with the latest 25 stories.
-- Open `/atom.xml` — Atom feed.
-- Open `/about` — about page for Birmingham.
-- Open `/tags/budget` (or `/tags/safety`) — tag filter page.
+- `https://civic-newsletter-build.vercel.app/` — splash page with search,
+  "Live cities" grid, and request-coverage form.
+- `https://civic-newsletter-build.vercel.app/birmingham-al` — Birmingham
+  city home with the latest approved stories in reverse chronological
+  order.
+- `https://civic-newsletter-build.vercel.app/birmingham-al/posts/<slug>` —
+  individual story page.
+- `https://civic-newsletter-build.vercel.app/birmingham-al/rss.xml` — RSS
+  feed with the latest 25 stories.
+- `https://civic-newsletter-build.vercel.app/birmingham-al/atom.xml` —
+  Atom feed.
+- `https://civic-newsletter-build.vercel.app/birmingham-al/tags/budget` —
+  tag filter page.
+- `https://civic-newsletter-build.vercel.app/about` — about the platform.
 
-If the homepage shows "No published stories yet", check that the env vars are set correctly and that there are rows in `stories` where `city_id` matches Birmingham's id, `qc_status='approved'`, and `published_at IS NOT NULL`.
+If a city home shows "It's quiet in {city} this week", check that there
+are rows in `stories` where `city_id` matches that city's id,
+`qc_status='approved'`, and `published_at IS NOT NULL`.
 
 ## Step 4 — Adding the next city
 
-For Savannah (or any other city):
+The new city onboarding flow is entirely data-driven:
 
-1. Vercel → New Project → import the same repo.
-2. Root Directory: `web`.
-3. Project name: `savannah-civic`.
-4. Same env vars **but** `CITY_SUBDOMAIN=savannah`. Also `UPDATE cities SET site_url='https://savannah-civic.vercel.app' WHERE name='Savannah';` in Supabase so the ad-creative script knows where to point ads for that city.
-5. Deploy.
+1. Insert the city row in Supabase:
 
-That's it. Same codebase, different env vars per project. No code shared between cities at runtime — each deployment loads only its own city's data. There is no cross-city navigation anywhere in the codebase.
+   ```sql
+   insert into public.cities (name, subdomain, state, state_code, country, timezone, active)
+   values ('Medford', 'medford-or', 'Oregon', 'OR', 'USA', 'America/Los_Angeles', true);
+   ```
 
-## Step 5 — Auto-redeploy on new content
+2. (Optional) bootstrap branding:
 
-Vercel can rebuild when new stories are approved. Two options:
+   ```
+   node --env-file=.env scripts/bootstrap-branding.mjs --city Medford
+   ```
 
-**Option A — Use the built-in `revalidate = 300`** (default for now). Pages re-fetch from Supabase every 5 minutes on the first request after that window. Simplest. No webhook setup. The 5-minute lag is acceptable for civic content.
+3. The new city is live immediately at
+   `civic-newsletter-build.vercel.app/medford-or`. No Vercel changes. No
+   redeploy. The splash search picks it up automatically. The "Live
+   cities" grid shows it as soon as it has one approved story.
 
-**Option B — Supabase webhook to Vercel deploy hook** (set up later). Each Vercel project has a deploy hook URL (Settings → Git → Deploy Hooks). Add a Supabase database webhook on `stories` UPDATE WHERE `qc_status='approved'` that POSTs to the deploy hook. Triggers a full rebuild within ~30 seconds of approval. Skip for MVP.
+`cities.site_url` is now only needed when a city has its own custom domain.
+For everything served from the main Vercel project, leave `site_url` NULL
+and the path-based default kicks in.
+
+## Step 5 — Auto-refresh on new content
+
+Pages already use `revalidate = 300`, so the city home and story pages
+re-fetch from Supabase every 5 minutes on the first request after that
+window. The 5-minute lag is acceptable for civic content. If you want
+faster propagation later, add a Supabase database webhook on `stories`
+UPDATE WHERE `qc_status='approved'` that POSTs to a Vercel deploy hook —
+triggers a full rebuild within ~30 seconds of approval.
 
 ## Manual steps that still exist (future automation)
 
-These are acceptable for MVP but should be scripted by Phase 4:
-
-- Creating the Vercel project per city → automatable via Vercel API. The future `scripts/onboard-city.js` script can hit `POST /v9/projects` programmatically.
-- Setting env vars per project → also Vercel API (`POST /v10/projects/{id}/env`).
-- Initial branding bootstrap → already scripted (`node --env-file=.env scripts/bootstrap-branding.mjs --city Birmingham`).
-- DNS for a real domain → not needed until you buy `civicwire.com` and upgrade to Vercel Pro.
+- Inserting the city row → trivial SQL today; can be a `scripts/onboard-city.js`
+  CLI wrapper later.
+- Initial branding bootstrap → already scripted (`scripts/bootstrap-branding.mjs`).
 
 ## Free tier limits to know
 
 - 100 GB bandwidth/month per Vercel account (plenty for early-stage city blogs).
-- One `*.vercel.app` subdomain per project (we use one project per city).
 - Build minutes are not metered on Hobby plan.
-- No wildcard domain support — that's the only reason Pro would be needed at scale.
+- No wildcard DNS required anymore — every city shares one project, one
+  domain, one cert.
 
-## Phase C: splash + Birmingham move
+## Cutting over from the old subdomain setup
 
-The cutover is two manual Vercel steps. The code already supports both modes
-from the same deploy:
+The path-based code includes a transitional `middleware.ts` that honors the
+old `CITY_SUBDOMAIN` env var. While the var is set on a deployment,
+requests for `/` are 308-redirected to `/{CITY_SUBDOMAIN}`, so old single-
+tenant projects keep working without breaking inbound links.
 
-1. **Create the new Birmingham project.**
-   - Vercel → New Project → import the same `civic-newsletter` repo.
-   - Root Directory: `web`.
-   - Project name: `birmingham-al-civic-newsletter-build` (becomes
-     `birmingham-al-civic-newsletter-build.vercel.app`).
-   - Env vars (Production + Preview + Development):
+To finish the cutover:
 
-     | Name | Value |
-     |---|---|
-     | `CITY_SUBDOMAIN` | `birmingham-al` |
-     | `NEXT_PUBLIC_SUPABASE_URL` | `https://yfynwejgbyeisharldyk.supabase.co` |
-     | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | legacy anon JWT (see anon-key note above) |
-     | `REQUEST_HASH_SALT` | any 32+ char random string |
-
-     (No `BEEHIIV_*` env vars in this phase. The on-blog subscribe form is intentionally not built — newsletter is post-MVP.)
-
-   - Deploy. Verify `birmingham-al-civic-newsletter-build.vercel.app/` shows
-     the Birmingham home with the new card grid and source chips.
-
-2. **Convert the original project into the splash page.**
-   - Vercel → existing `civic-newsletter-build` project → Settings →
-     Environment Variables.
-   - **Remove** `CITY_SUBDOMAIN`.
-   - Keep `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-   - **Add** `REQUEST_HASH_SALT` (any 32+ char random string).
-   - Do NOT add `BEEHIIV_*` env vars — the on-blog subscribe form is removed in this phase.
-   - Redeploy. With no `CITY_SUBDOMAIN` and no `UMBRELLA_DOMAIN` match,
-     `isSplashRequest()` returns true and the root URL renders `SplashHome`
-     instead of a city blog.
-
-3. **Update Birmingham's `site_url` in Supabase** so the splash page's
-   "Live cities" cards and the ad pipeline both point readers to the new
-   subdomain:
+1. Delete `CITY_SUBDOMAIN` from every Vercel project. Redeploy so the
+   redirect goes away and the splash renders at `/`.
+2. Update `cities.site_url` for any city whose `site_url` still points at
+   an old single-tenant subdomain. Either set it to NULL (use the path-
+   based default) or to the new path-based URL:
 
    ```sql
-   update public.cities
-   set site_url = 'https://birmingham-al-civic-newsletter-build.vercel.app'
-   where subdomain = 'birmingham-al';
+   update public.cities set site_url = null where subdomain = 'birmingham-al';
    ```
 
-4. **Verify end-to-end.**
-   - `civic-newsletter-build.vercel.app/` → splash, search works, "Live
-     cities" shows Birmingham, submitting the request form returns
-     `{ ok: true }` and a row appears in `city_requests`.
-   - `birmingham-al-civic-newsletter-build.vercel.app/` → city home as before.
-   - `/api/search?q=bir` → returns Birmingham.
+3. Delete the old per-city Vercel projects once nothing links to them.
+4. Eventually delete `middleware.ts` from the repo — it's only there for
+   the transition.
 
-Adding a city after Phase C: same as the per-city section above. Spin up a
-new Vercel project per city, set `CITY_SUBDOMAIN`, set `cities.site_url`.
+## Per-city custom domains (later)
 
-## Multi-tenant config (future, once you own civicwire.com + Vercel Pro)
+If you ever want a city to live at its own domain (e.g.
+`birminghamcivic.com`), you can:
 
-When you're ready to consolidate cities onto one deployment:
+1. Add the domain to the main Vercel project.
+2. Add a Vercel rewrite: `birminghamcivic.com/*` → `/birmingham-al/*`.
+3. Set `cities.site_url = 'https://birminghamcivic.com'` so internal links
+   and feeds use the custom domain.
 
-1. Buy `civicwire.com` (or whatever umbrella you choose).
-2. Add it to the Vercel project as a custom domain. Add `*.civicwire.com` as a wildcard. Vercel auto-provisions an SSL cert per requested subdomain.
-3. In Vercel env vars, **add** `UMBRELLA_DOMAIN=civicwire.com` and **remove** `CITY_SUBDOMAIN`.
-4. Point DNS so `*.civicwire.com` resolves to Vercel (CNAME or A record per Vercel's instructions).
-5. Done. From that point on, adding a new city means inserting a row in `cities` with a new `subdomain` value — no code change, no env var change, no redeploy.
-
-If both `UMBRELLA_DOMAIN` and `CITY_SUBDOMAIN` are set, the umbrella host match wins when the request matches the wildcard, and the env var only resolves requests that don't match (useful during cutover).
+Path-based routing means no subdomain DNS wildcard is ever required.
