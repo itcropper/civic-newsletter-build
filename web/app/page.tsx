@@ -4,7 +4,6 @@ import { listStories, headline, formatDate } from '@/lib/stories';
 import { SourceChip } from '@/components/SourceBadge';
 import { ImpactPill } from '@/components/ImpactPill';
 import SplashHome from '@/components/SplashHome';
-import SubscribeForm from '@/components/SubscribeForm';
 import { supabase } from '@/lib/supabase';
 import type { StoryRow } from '@/lib/supabase';
 
@@ -63,16 +62,13 @@ async function CityHomeView() {
 
   if (stories.length === 0) {
     return (
-      <>
-        <div className="empty-state">
-          <span className="empty-state-emoji" aria-hidden>{'\u{1F4F0}'}</span>
-          <h2 className="empty-state-title">It&rsquo;s quiet in {city.name} this week.</h2>
-          <p className="empty-state-body">
-            No new public-meeting coverage yet. Check back soon &mdash; we&rsquo;ll let you know when something changes.
-          </p>
-        </div>
-        <SubscribeForm cityName={city.name} variant="hero" />
-      </>
+      <div className="empty-state">
+        <span className="empty-state-emoji" aria-hidden>{'\u{1F4F0}'}</span>
+        <h2 className="empty-state-title">It&rsquo;s quiet in {city.name} this week.</h2>
+        <p className="empty-state-body">
+          No new public-meeting coverage yet. Check back soon.
+        </p>
+      </div>
     );
   }
 
@@ -80,17 +76,12 @@ async function CityHomeView() {
   const rest = stories.filter((s) => s.id !== lead.id);
 
   return (
-    <>
-      <SubscribeForm cityName={city.name} variant="hero" />
-      <div style={{ height: 24 }} />
-      <div className="card-grid">
-        <StoryCard story={lead} cityTimezone={city.timezone} variant="lead" />
-        {rest.map((s) => (
-          <StoryCard key={s.id} story={s} cityTimezone={city.timezone} />
-        ))}
-      </div>
-      <SubscribeForm cityName={city.name} variant="footer" />
-    </>
+    <div className="card-grid">
+      <StoryCard story={lead} cityTimezone={city.timezone} variant="lead" />
+      {rest.map((s) => (
+        <StoryCard key={s.id} story={s} cityTimezone={city.timezone} />
+      ))}
+    </div>
   );
 }
 

@@ -41,13 +41,11 @@ Or use the GitHub website to add a new remote and push.
    | `CITY_SUBDOMAIN` | `birmingham-al` |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://yfynwejgbyeisharldyk.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (paste the legacy JWT anon key — see note below) |
-   | `BEEHIIV_API_KEY` | (Beehiiv API key — required for the on-page subscribe form) |
-   | `BEEHIIV_PUBLICATION_ID` | (fallback Beehiiv publication id, used when `cities.beehiiv_publication_id` is null) |
    | `REQUEST_HASH_SALT` | any 32+ char random string (used to hash IPs for rate-limiting) |
 
    The site URL is derived from the request `Host` header at runtime, so there's no `NEXT_PUBLIC_SITE_URL` to set. RSS/Atom feeds, canonical tags, and OG metadata all build their absolute URLs from whatever hostname the visitor used to reach the site.
 
-   **Per-city Beehiiv publication** — `cities.beehiiv_publication_id` overrides `BEEHIIV_PUBLICATION_ID` when set. During the Birmingham-only phase you can leave the column null on every city and rely on the env-var fallback. When you spin up a second city's Beehiiv publication, set the column for that city to keep audiences separate.
+   **No newsletter env vars yet.** Beehiiv-related env vars (`BEEHIIV_API_KEY`, `BEEHIIV_PUBLICATION_ID`) are NOT required for this phase — there is no on-blog subscribe form in the current build. The "tell me when my city is added" flow lives on the splash page and writes to `public.city_requests` directly. When we re-introduce per-city newsletter signup, we'll add the env vars back here.
 
    **Anon key note** — Use the **legacy** anon key (starts with `eyJ`), not the new `sb_publishable_...` format. Find it in Supabase Dashboard → Project Settings → API → "Legacy API keys" (or via the `get_publishable_keys` MCP call). Anon keys are designed to be public-facing — they identify the project, and Row Level Security on the database is what actually gates access.
 
@@ -121,6 +119,8 @@ from the same deploy:
      | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | legacy anon JWT (see anon-key note above) |
      | `REQUEST_HASH_SALT` | any 32+ char random string |
 
+     (No `BEEHIIV_*` env vars in this phase. The on-blog subscribe form is intentionally not built — newsletter is post-MVP.)
+
    - Deploy. Verify `birmingham-al-civic-newsletter-build.vercel.app/` shows
      the Birmingham home with the new card grid and source chips.
 
@@ -130,6 +130,7 @@ from the same deploy:
    - **Remove** `CITY_SUBDOMAIN`.
    - Keep `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
    - **Add** `REQUEST_HASH_SALT` (any 32+ char random string).
+   - Do NOT add `BEEHIIV_*` env vars — the on-blog subscribe form is removed in this phase.
    - Redeploy. With no `CITY_SUBDOMAIN` and no `UMBRELLA_DOMAIN` match,
      `isSplashRequest()` returns true and the root URL renders `SplashHome`
      instead of a city blog.

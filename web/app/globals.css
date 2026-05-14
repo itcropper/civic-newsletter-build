@@ -309,66 +309,6 @@ body {
 .post-detail h1 { font-family: var(--font-display); }
 .post-detail .post-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* ---------- Subscribe block (city blog) ---------- */
-.subscribe-block {
-  margin: 32px 0 0;
-  padding: 24px 24px 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  border-left: 3px solid var(--color-primary);
-}
-.subscribe-title {
-  font-family: var(--font-display);
-  font-size: 22px;
-  margin: 0 0 6px;
-}
-.subscribe-sub {
-  margin: 0 0 16px;
-  color: var(--color-text-muted);
-  font-size: 15px;
-}
-.subscribe-form {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.subscribe-form input[type="email"] {
-  flex: 1 1 240px;
-  padding: 12px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  font-family: var(--font-reading);
-  font-size: 16px;
-  outline: none;
-  background: #fff;
-}
-.subscribe-form input[type="email"]:focus { border-color: var(--color-primary); }
-.subscribe-form button {
-  padding: 12px 18px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms ease;
-}
-.subscribe-form button:hover { background: #163459; }
-.subscribe-form button:disabled { background: #99a4b4; cursor: not-allowed; }
-.subscribe-msg { margin: 10px 0 0; font-family: var(--font-sans); font-size: 14px; }
-.subscribe-msg.ok { color: #2d6b3a; }
-.subscribe-msg.err { color: var(--color-danger); }
-
-.subscribe-block-footer {
-  margin: 48px 0 0;
-  border-left-width: 3px;
-}
-.subscribe-block-footer .subscribe-title { font-size: 18px; }
-.subscribe-block-footer .subscribe-sub { font-size: 14px; }
-
 /* ---------- Splash page ---------- */
 .splash-header {
   background-color: var(--color-primary);
