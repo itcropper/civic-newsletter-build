@@ -7,6 +7,7 @@
 
 import supabase from './config/db.js';
 import { getOpsConfigBatch } from './utils/ops-config.js';
+import { runVideoArchiveDiscoverer } from './agents/01a-video-archive-discoverer.js';
 import { runCrawler } from './agents/01-crawler.js';
 import { runIngestionQC } from './agents/02-ingestion-qc.js';
 import { runTranscription } from './agents/03-transcription.js';
@@ -30,6 +31,17 @@ export async function runNightlyPipeline(cityId) {
   console.log(`\n========== NIGHTLY PIPELINE: ${cityId} ==========`);
 
   try {
+    // Agent 1a — Video Archive Discoverer (runs before the crawler so that
+    // newly-discovered video_archive_urls are immediately picked up).
+    // No-ops for cities that already have video_archive_urls set, or that
+    // have already exhausted the 3-attempt cap without operator action.
+    console.log('[Pipeline] Starting Agent 1a: Video Archive Discoverer...');
+    const discoveryResult = await runVideoArchiveDiscoverer(cityId).catch((err) => {
+      console.error('[Pipeline] Video Archive Discoverer failed:', err.message);
+      return { status: 'error', foundUrls: [], strategyUsed: null, reason: err.message };
+    });
+    console.log(`[Pipeline] Discoverer: status=${discoveryResult.status}, strategy=${discoveryResult.strategyUsed || 'n/a'}, urls=${(discoveryResult.foundUrls || []).length}`);
+
     // Agent 1 — Crawl
     console.log('[Pipeline] Starting Agent 1: Crawler...');
     const crawlResults = await runCrawler(cityId);
@@ -87,6 +99,7 @@ export async function runNightlyPipeline(cityId) {
     console.log(`[Pipeline] Nightly pipeline complete in ${elapsed}s`);
 
     return {
+      discovery: discoveryResult,
       crawl: crawlResults,
       ingestion: qcResults,
       transcription: transcriptResults,

@@ -2,30 +2,35 @@
  * Agent 1 — Civic Content Crawler
  * Model: Claude Sonnet
  *
- * Reads meeting pages from a city's pre-configured archive URL list
- * (stored in cities.archive_urls). This list is provided by the operator
- * during city onboarding — it contains the specific archive/agenda pages
- * for each meeting body (city council, planning commission, school board, etc.)
+ * Walks per-city seed pages and finds public-meeting content (videos,
+ * minutes, agendas), inserting deduped rows into `meetings`.
  *
- * When archive_urls is set, the crawler visits exactly those pages and
- * follows only one level of links outward (to individual meeting PDFs,
- * agenda pages, or video links found on those pages). No autonomous
- * wide-area discovery is performed.
+ * Source priority (highest first):
+ *   1. `cities.video_archive_urls` (priority 0). Populated by Agent 1a
+ *      (video-archive-discoverer) or by an operator. These are the pages
+ *      that LIST the city's collection of recorded meeting videos.
+ *      Crawler follows EVERY in-date meeting link found on these pages,
+ *      not just a top-N slice, because the whole point is to backfill
+ *      transcribable video coverage.
+ *   2. `cities.archive_urls` (priority 1). Operator-curated agenda /
+ *      minutes index pages. Crawler walks these + one level outward
+ *      with the usual top-5 cap.
+ *   3. Legacy autonomous mode (no archive_urls + no video_archive_urls):
+ *      starts from seed_url and uses Claude-guided navigation. Unpredictable.
+ *      Add archive_urls during onboarding and run Agent 1a to populate
+ *      video_archive_urls.
  *
- * If archive_urls is NOT set (legacy / fallback mode), the crawler falls
- * back to autonomous AI-guided navigation starting from seed_url. This
- * mode is unpredictable and should be replaced with a proper archive_urls
- * list as part of city onboarding.
+ * Date window: 7 days back from "today" (also applied to first crawls of
+ * new cities, per MVP scope). Override later if backfill cost is fine.
  *
  * Onboarding a new city:
- *   1. Visit the city's website and find the meeting minutes/agendas page
- *      for each governing body you want to cover.
- *   2. Add those URLs to cities.archive_urls in the database:
- *      e.g. ["https://cityname.gov/AgendaCenter",
- *            "https://cityname.legistar.com/Calendar.aspx",
- *            "https://cityname.novusagenda.com/agendapublic/"]
- *   3. The crawler will visit exactly these pages each nightly run and
- *      extract meeting links found on them.
+ *   1. Insert cities row with name, subdomain, seed_url.
+ *   2. Optionally seed archive_urls with agenda/minutes URLs.
+ *   3. Run the pipeline. Agent 1a auto-discovers video_archive_urls
+ *      (3 attempts: pattern → path → LLM). If all 3 fail it flags
+ *      manual_needed and the observer report surfaces the city.
+ *   4. Operator can drop URLs into video_archive_urls at any time to
+ *      override; status flips to manual_set and discovery stops.
  */
 
 import crypto from 'crypto';
@@ -141,35 +146,49 @@ RULES:
 export async function runCrawler(cityId) {
   const { data: city, error: cityErr } = await supabase
     .from('cities')
-    .select('id, name, seed_url, archive_urls, send_schedule, last_issue_date')
+    .select('id, name, seed_url, archive_urls, video_archive_urls, send_schedule, last_issue_date')
     .eq('id', cityId)
     .single();
 
   if (cityErr || !city) throw new Error(`City not found: ${cityId}`);
 
-  // Compute date range for this crawl based on newsletter schedule
-  const dateRange = getDateRange(city.send_schedule, city.last_issue_date);
+  const dateRange = getDateRange();
   const systemPrompt = buildNavigatorSystem(city.name, dateRange);
-
-  console.log(`[Crawler] ${city.name}: date range ${dateRange?.start} to ${dateRange?.end}`);
+  console.log(`[Crawler] ${city.name}: date range ${dateRange.start} to ${dateRange.end}`);
 
   const results = { newMeetings: 0, pagesVisited: 0, errors: [], mode: 'unknown' };
   const visited = new Set();
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // MODE A: archive_urls provided (preferred — operator-configured)
-  // Visits exactly the supplied archive pages + one level of outbound links.
-  // ─────────────────────────────────────────────────────────────────────────
-  const archiveUrls = city.archive_urls;
-  if (archiveUrls && Array.isArray(archiveUrls) && archiveUrls.length > 0) {
-    results.mode = 'archive_urls';
-    console.log(`[Crawler] ${city.name}: using archive_urls mode (${archiveUrls.length} configured URLs)`);
+  const videoArchiveUrls = Array.isArray(city.video_archive_urls) ? city.video_archive_urls : [];
+  const archiveUrls = Array.isArray(city.archive_urls) ? city.archive_urls : [];
 
-    const queue = archiveUrls.map(url => ({
-      url: ensureProtocol(url),
-      reason: 'operator-configured archive URL',
-      priority: 1,
-    }));
+  // ─────────────────────────────────────────────────────────────────────────
+  // MODE A: archive_urls (and/or video_archive_urls) provided.
+  // video_archive_urls are queued at priority 0 (highest) so the crawler
+  // always finishes harvesting video pages before falling through to
+  // agenda/minutes pages.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (videoArchiveUrls.length > 0 || archiveUrls.length > 0) {
+    results.mode = videoArchiveUrls.length > 0 ? 'archive_with_video' : 'archive_urls';
+    console.log(`[Crawler] ${city.name}: archive mode — video_archive_urls=${videoArchiveUrls.length}, archive_urls=${archiveUrls.length}`);
+
+    const queue = [];
+    for (const url of videoArchiveUrls) {
+      queue.push({
+        url: ensureProtocol(url),
+        reason: 'video archive index (priority 0)',
+        priority: 0,
+        isVideoIndex: true,
+      });
+    }
+    for (const url of archiveUrls) {
+      queue.push({
+        url: ensureProtocol(url),
+        reason: 'operator-configured archive URL',
+        priority: 1,
+        isVideoIndex: false,
+      });
+    }
 
     while (queue.length > 0 && results.pagesVisited < MAX_STEPS && results.newMeetings < MAX_MEETINGS) {
       queue.sort((a, b) => a.priority - b.priority);
@@ -218,13 +237,27 @@ export async function runCrawler(cityId) {
           }
         }
 
-        // In archive_urls mode, follow only the most promising links found
-        // on the archive page itself (one level deep — no recursive expansion)
+        // Link-following policy:
+        //   - On a video-index page (isVideoIndex), follow EVERY link to a
+        //     plausible meeting-video detail page that the LLM surfaced.
+        //     These are the recordings we exist to transcribe — capping at
+        //     top-5 would silently drop coverage.
+        //   - On a regular operator archive page, keep the top-5 cap to
+        //     avoid runaway expansion into navigation/footer links.
         if (analysis.links_to_follow && analysis.links_to_follow.length > 0) {
-          for (const link of analysis.links_to_follow.slice(0, 5)) {
+          const slice = next.isVideoIndex ? analysis.links_to_follow : analysis.links_to_follow.slice(0, 5);
+          for (const link of slice) {
             const linkUrl = normalizeUrl(link.url);
-            if (!visited.has(linkUrl) && link.priority <= 2) {
-              queue.push({ url: linkUrl, reason: link.reason, priority: link.priority + 1 });
+            if (visited.has(linkUrl)) continue;
+            // Video-index children are still video-shaped — keep the flag.
+            const childIsVideoIndex = next.isVideoIndex && looksLikeVideoMeetingLink(link);
+            if (next.isVideoIndex || link.priority <= 2) {
+              queue.push({
+                url: linkUrl,
+                reason: link.reason,
+                priority: (link.priority || 3) + (next.isVideoIndex ? 0 : 1),
+                isVideoIndex: childIsVideoIndex,
+              });
             }
           }
         }
@@ -247,7 +280,7 @@ export async function runCrawler(cityId) {
   console.warn(`[Crawler] ${city.name}: LEGACY MODE — no archive_urls configured. Add archive_urls during city onboarding for reliable crawling.`);
 
   // Start with the seed URL — Claude will figure out where to go from there
-  const queue = [{ url: ensureProtocol(city.seed_url), reason: 'seed URL', priority: 1 }];
+  const queue = [{ url: ensureProtocol(city.seed_url), reason: 'seed URL', priority: 1, isVideoIndex: false }];
 
   // Seed common meeting page patterns as starting points
   const seedOrigin = new URL(ensureProtocol(city.seed_url)).origin;
@@ -259,7 +292,7 @@ export async function runCrawler(cityId) {
     '/public-meetings', '/calendar', '/government/calendar',
   ];
   for (const path of commonPaths) {
-    queue.push({ url: seedOrigin + path, reason: 'common meeting page path', priority: 3 });
+    queue.push({ url: seedOrigin + path, reason: 'common meeting page path', priority: 3, isVideoIndex: false });
   }
 
   while (queue.length > 0 && results.pagesVisited < MAX_STEPS && results.newMeetings < MAX_MEETINGS) {
@@ -468,25 +501,37 @@ function mapMeetingType(type) {
 }
 
 /**
- * Compute the date range for crawling based on the city's send_schedule.
- * Returns { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } or null.
+ * Compute the crawl date range. Fixed at 7 days back for MVP — including
+ * first-time crawls of newly-added cities. Increase later if backfill
+ * cost is acceptable (AssemblyAI charges per hour of audio).
+ *
+ * Returns { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' }.
  */
-function getDateRange(sendSchedule, lastIssueDate) {
+function getDateRange() {
   const now = new Date();
   const end = now.toISOString().split('T')[0];
-
-  if (lastIssueDate) {
-    // Go back to last issue date (with a small buffer)
-    const d = new Date(lastIssueDate);
-    d.setDate(d.getDate() - 2); // 2-day overlap buffer
-    return { start: d.toISOString().split('T')[0], end };
-  }
-
-  // Default lookback based on schedule
-  const lookbackDays = sendSchedule === 'weekly' ? 14 : 45;
   const start = new Date(now);
-  start.setDate(start.getDate() - lookbackDays);
+  start.setDate(start.getDate() - 7);
   return { start: start.toISOString().split('T')[0], end };
+}
+
+/**
+ * Heuristic: does this link from a video-index page look like an
+ * individual meeting recording (vs. a back-nav, paginator, or footer link)?
+ * Used to decide whether children of a video-index page should themselves
+ * be queued with isVideoIndex=true so deep links don't trigger the
+ * unbounded follow-everything policy when they aren't appropriate.
+ */
+function looksLikeVideoMeetingLink(link) {
+  const url = (link.url || '').toLowerCase();
+  const reason = (link.reason || '').toLowerCase();
+  // Treat detail pages as "video meeting" only when the URL or reason
+  // strongly suggests a single recording, not another index page.
+  const detailUrl = /(player|video|watch|meeting|view_id|clip_id|recording|stream|broadcast)/.test(url);
+  const detailReason = /(video|recording|watch|player|individual meeting|specific meeting)/.test(reason);
+  // Avoid treating obvious pagination as video-index children.
+  const isPagination = /[?&](page|p|offset|start)=\d+/.test(url);
+  return (detailUrl || detailReason) && !isPagination;
 }
 
 /**
