@@ -328,6 +328,7 @@ A "video archive index" is a single page that lists the COLLECTION of recorded p
 - City-hosted "/watch" or "/cctv" pages listing dozens of past meeting recordings
 - City YouTube channel "Uploads" / "Videos" tab if it's the canonical archive
 - A "Meeting Videos" tab on AgendaCenter / civic platforms
+- A page whose primary content is an embedded video player (iframe) wrapping a TelVue / Granicus / similar archive — count the WRAPPER page as the archive index when the embed clearly lists many past meetings.
 
 What does NOT count:
 - A single video page (one meeting)
@@ -350,7 +351,8 @@ Return JSON:
 RULES:
 - "found" must be true ONLY if THIS page itself is the archive index. If you only see a LINK to it, mark found=false and put the URL in next_links.
 - confidence ≥ 0.7 means "I am confident this is the archive index." Reserve ≥ 0.9 for cases where the page clearly shows a list of dated meeting videos.
-- next_links should be at most 4 URLs. Prefer links labeled "video", "watch", "archive", "recordings", "media", "cctv", "live stream archive", or any civic-platform subdomain link (Granicus, Legistar, iQM2, PrimeGov).
+- next_links should be at most 4 URLs. Prefer links labeled "video", "watch", "archive", "recordings", "media", "cctv", "live stream archive", or any civic-platform subdomain link (Granicus, Legistar, iQM2, PrimeGov, TelVue).
+- Links prefixed "[iframe]" in the link list are EMBEDDED player frames. Treat them as highest-priority next_links when the page itself is titled "Watch", "Videos", "Meetings", "Media", etc., because the actual archive list usually lives inside the embed.
 - Do NOT include single-meeting video URLs in next_links — only candidates for the INDEX page.`;
 
 async function strategyLLM(city) {
@@ -402,6 +404,15 @@ async function strategyLLM(city) {
       if (link.url && !visited.has(normalizeUrl(link.url))) {
         queue.push({ url: link.url, reason: link.reason });
       }
+    }
+
+    // Safety net: if the page wraps a single dominant video-platform
+    // iframe (TelVue, Granicus player, etc.), queue it even if Claude
+    // didn't surface it in next_links. The wrapper page is often almost
+    // empty text-wise, so the LLM may not have enough signal to follow.
+    const platformIframe = (page.iframes || []).find((src) => isLikelyVideoArchiveFrame(src));
+    if (platformIframe && !visited.has(normalizeUrl(platformIframe))) {
+      queue.unshift({ url: platformIframe, reason: 'dominant iframe (auto-followed)' });
     }
 
     await sleep(POLITE_DELAY_MS);
@@ -459,8 +470,16 @@ async function probeForArchive(url) {
     const datePattern = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:,\s*20\d\d)?\b|\b\d{1,2}\/\d{1,2}\/20\d\d\b/g;
     const dateMatches = (text.match(datePattern) || []).length;
 
-    // Count video-like links/player references.
-    const videoTokenCount = (html.match(/\.(mp4|m3u8|webm)|youtube\.com\/watch|granicus\.com\/MediaPlayer|telvue|player\.html/gi) || []).length;
+    // Count video-like links/player references — direct media URLs,
+    // platform players, AND iframe srcs (TelVue / Granicus / etc. often
+    // embed their playlist viewer in an iframe rather than expose
+    // anchor-tag links).
+    const videoTokenCount = (html.match(
+      /\.(mp4|m3u8|webm)|youtube\.com\/watch|granicus\.com\/MediaPlayer|videoplayer\.telvue\.com|telvue\.com\/player|player\.html|\/playlists?\//gi
+    ) || []).length;
+    const iframeVideoCount = (html.match(
+      /<iframe[^>]+src=["'][^"']*(videoplayer\.telvue\.com|telvue\.com|granicus\.com|legistar\.com|iqm2\.com|primegov\.com|youtube\.com\/embed|player\.vimeo\.com|panopto\.com)/gi
+    ) || []).length;
 
     let confidence = 0;
     const hints = [];
@@ -471,6 +490,7 @@ async function probeForArchive(url) {
     else if (dateMatches >= 2) { confidence += 0.15; hints.push(`${dateMatches} dates`); }
     if (videoTokenCount >= 5) { confidence += 0.30; hints.push(`${videoTokenCount} video refs`); }
     else if (videoTokenCount >= 2) { confidence += 0.15; hints.push(`${videoTokenCount} video refs`); }
+    if (iframeVideoCount >= 1) { confidence += 0.25; hints.push(`${iframeVideoCount} video iframe(s)`); }
 
     confidence = Math.min(confidence, 0.95);
 
@@ -503,6 +523,7 @@ async function fetchPageText(url) {
       .replace(/\s+/g, ' ')
       .trim();
 
+    // Anchor-tag links
     const links = [];
     const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
     let m;
@@ -513,7 +534,26 @@ async function fetchPageText(url) {
         links.push(linkText ? `${linkText} → ${href}` : href);
       } catch { /* skip malformed href */ }
     }
-    return { text, links };
+
+    // Iframe srcs. Cities like Ashland wrap the video archive (TelVue,
+    // Granicus player, etc.) in an iframe on a CMS page that has very
+    // little anchor-tag content. Without these, the LLM strategy sees a
+    // near-empty page and either dead-ends or moves on. Tagged "[iframe]"
+    // so Claude can tell them apart from regular nav links.
+    const iframes = [];
+    const iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
+    while ((m = iframeRegex.exec(html)) !== null) {
+      try {
+        const src = new URL(m[1], url).toString();
+        // Skip in-page anchors and obvious non-content frames
+        if (src.startsWith(url + '#')) continue;
+        if (/about:blank|google-tag|recaptcha|tagmanager|googletagmanager/i.test(src)) continue;
+        iframes.push(src);
+        links.push(`[iframe] → ${src}`);
+      } catch { /* skip malformed src */ }
+    }
+
+    return { text, links, iframes };
   } catch {
     return null;
   }
@@ -534,6 +574,17 @@ function normalizeUrl(url) {
   } catch {
     return url;
   }
+}
+
+/**
+ * Recognize iframe srcs that are *likely to be the video archive itself*
+ * (vs. recaptcha, analytics, social embeds, etc.). Used by the LLM
+ * strategy to auto-follow when Claude doesn't surface the iframe in
+ * next_links.
+ */
+function isLikelyVideoArchiveFrame(src) {
+  if (!src) return false;
+  return /(videoplayer\.telvue\.com|telvue\.com\/player|granicus\.com|legistar\.com|iqm2\.com|primegov\.com|youtube\.com\/embed\/videoseries|youtube\.com\/playlist|panopto\.com\/Panopto\/Pages)/i.test(src);
 }
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }

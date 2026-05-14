@@ -51,7 +51,21 @@ const CIVIC_PORTAL_PATTERNS = [
 // Video platforms — recognized by the LLM but also auto-detected for priority boost
 const VIDEO_PLATFORM_PATTERNS = [
   'youtube.com', 'youtu.be', 'vimeo.com', 'telvue.com',
+  'videoplayer.telvue.com',
   'panopto.com', 'facebook.com/*/videos',
+];
+
+// Iframe srcs that strongly indicate a video archive playlist (vs. a
+// single video). Recognized by the iframe-detection branch so the crawler
+// follows them and treats the result as a video-archive index.
+const VIDEO_ARCHIVE_IFRAME_PATTERNS = [
+  /videoplayer\.telvue\.com\/player\/[^/]+\/playlists\//i,
+  /telvue\.com\/.*\/playlists?\//i,
+  /granicus\.com\/ViewPublisher/i,
+  /legistar\.com\/Calendar\.aspx/i,
+  /iqm2\.com\/Citizens\//i,
+  /primegov\.com\/portal\/meetings/i,
+  /youtube\.com\/(?:embed\/videoseries|playlist|@[^/]+\/videos)/i,
 ];
 
 /**
@@ -125,6 +139,7 @@ RULES:
 - Only include meetings_found entries for actual meeting content (recordings, minutes, agendas), not index/listing pages.
 - HIGHEST PRIORITY (priority 1): Links to civic portals (CivicClerk, Granicus, Legistar, Boarddocs, PrimeGov, etc.) — these are almost always the best source of current meeting content.
 - HIGH PRIORITY (priority 2): Links containing "minutes", "agendas", "recordings", "video", "watch", "archive", or any meeting body name (council, commission, board, committee).
+- Links in the page's link list prefixed "[iframe]" are EMBEDDED frames. When the iframe src points at TelVue, Granicus, Legistar, iQM2, YouTube playlists, Vimeo, or similar video platforms, treat it as priority 1 — the real archive lives inside the embed and you must follow it.
 - ALWAYS follow links to external domains if they lead to civic platforms or meeting content. Cities routinely host content on separate domains — this is expected and correct.
 - Do NOT follow links to social media profiles, news articles, job postings, or unrelated pages.
 - Limit links_to_follow to the 7 most promising links, ranked by priority (1 = highest).
@@ -205,7 +220,9 @@ export async function runCrawler(cityId) {
 
         results.pagesVisited++;
 
-        // Auto-detect civic portal + video platform links before Claude analysis
+        // Auto-detect civic portal + video platform links before Claude analysis.
+        // Propagate `isVideoIndex` so the follow-all policy kicks in on a
+        // discovered TelVue / Granicus playlist iframe.
         const civicPortalLinks = extractCivicPortalLinks(page.links);
         for (const portalLink of civicPortalLinks) {
           const portalUrl = normalizeUrl(portalLink.url);
@@ -214,6 +231,7 @@ export async function runCrawler(cityId) {
               url: portalUrl,
               reason: `auto-detected ${portalLink.platform}`,
               priority: portalLink.priority,
+              isVideoIndex: portalLink.isVideoIndex || false,
             });
           }
         }
@@ -323,8 +341,9 @@ export async function runCrawler(cityId) {
         if (!visited.has(portalUrl)) {
           queue.push({
             url: portalUrl,
-            reason: `auto-detected ${portalLink.platform} (${portalLink.priority === 1 ? 'civic portal' : 'video platform'})`,
+            reason: `auto-detected ${portalLink.platform} (${portalLink.priority === 0 ? 'video archive iframe' : portalLink.priority === 1 ? 'civic portal' : 'video platform'})`,
             priority: portalLink.priority,
+            isVideoIndex: portalLink.isVideoIndex || false,
           });
           console.log(`[Crawler]   -> AUTO-QUEUED: ${portalUrl} (${portalLink.platform})`);
         }
@@ -359,10 +378,12 @@ export async function runCrawler(cityId) {
           if (!visited.has(linkUrl)) {
             // Boost priority for civic portal links that Claude found
             const isCivicPortal = CIVIC_PORTAL_PATTERNS.some(p => linkUrl.includes(p));
+            const isVideoIframeIndex = VIDEO_ARCHIVE_IFRAME_PATTERNS.some((rx) => rx.test(linkUrl));
             queue.push({
               url: linkUrl,
               reason: link.reason,
-              priority: isCivicPortal ? 1 : (link.priority || 3),
+              priority: isVideoIframeIndex ? 0 : (isCivicPortal ? 1 : (link.priority || 3)),
+              isVideoIndex: isVideoIframeIndex,
             });
           }
         }
@@ -464,7 +485,24 @@ async function fetchPage(url) {
       } catch {}
     }
 
-    return { text, links };
+    // Extract iframe srcs. Many city archive pages (CivicPlus, custom
+    // CMSes) wrap a TelVue / Granicus player in an iframe with very few
+    // anchor-tag links on the page itself. Without these, the crawler
+    // never reaches the actual archive. Tagged "[iframe]" so the LLM
+    // and the civic-portal auto-detector both treat them appropriately.
+    const iframes = [];
+    const iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
+    while ((match = iframeRegex.exec(html)) !== null) {
+      try {
+        const src = new URL(match[1], url).toString();
+        if (src.startsWith(url + '#')) continue;
+        if (/about:blank|google-tag|recaptcha|tagmanager|googletagmanager|disqus/i.test(src)) continue;
+        iframes.push(src);
+        links.push(`[iframe] → ${src}`);
+      } catch {}
+    }
+
+    return { text, links, iframes };
   } catch (err) {
     console.error(`[Crawler] Fetch failed for ${url}:`, err.message);
     return null;
@@ -560,25 +598,35 @@ function extractCivicPortalLinks(links) {
   const seen = new Set();
 
   for (const link of links) {
-    // Links are in format "Link Text → URL" or just "URL"
+    // Links are in format "Link Text → URL", "[iframe] → URL", or just "URL"
+    const isIframe = link.startsWith('[iframe]');
     const urlPart = link.includes('→') ? link.split('→').pop().trim() : link.trim();
     if (seen.has(urlPart)) continue;
 
-    // Check civic portal subdomains (highest priority)
+    // Iframe srcs matching a known video-archive playlist pattern: treat
+    // as a priority-0 video-index page. This is how we follow the TelVue
+    // playlist wrapped inside a CivicPlus page.
+    if (isIframe && VIDEO_ARCHIVE_IFRAME_PATTERNS.some((rx) => rx.test(urlPart))) {
+      seen.add(urlPart);
+      found.push({ url: urlPart, platform: 'video-archive-iframe', priority: 0, isVideoIndex: true });
+      continue;
+    }
+
+    // Check civic portal subdomains (highest priority among link-type matches)
     for (const pattern of CIVIC_PORTAL_PATTERNS) {
       if (urlPart.includes(pattern) && isCivicSubdomain(urlPart, pattern)) {
         seen.add(urlPart);
-        found.push({ url: urlPart, platform: pattern.split('.')[0], priority: 1 });
+        found.push({ url: urlPart, platform: pattern.split('.')[0], priority: 1, isVideoIndex: false });
         break;
       }
     }
 
-    // Check video platforms (priority 2) — only direct video links, not marketing
+    // Check video platforms (priority 2) — direct video URLs, not marketing pages
     if (!seen.has(urlPart)) {
       for (const pattern of VIDEO_PLATFORM_PATTERNS) {
         if (urlPart.includes(pattern)) {
           seen.add(urlPart);
-          found.push({ url: urlPart, platform: pattern.split('.')[0], priority: 2 });
+          found.push({ url: urlPart, platform: pattern.split('.')[0], priority: 2, isVideoIndex: false });
           break;
         }
       }
